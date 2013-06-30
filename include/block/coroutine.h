@@ -45,7 +45,7 @@
  *       ....
  *   }
  */
-#define coroutine_fn
+#define coroutine_fn __attribute__((cps))
 
 typedef struct Coroutine Coroutine;
 
