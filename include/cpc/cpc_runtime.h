@@ -23,6 +23,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+#ifndef _CPC_RUNTIME_H
+
+#define _CPC_RUNTIME_H
+
 /* CPC cannot parse anonymous functions (aka Apple's "blocks") */
 #undef __BLOCKS__
 
@@ -129,3 +133,4 @@ cpc_continuation_patch(cpc_continuation *cont, size_t size, const void *value)
   return;
 }
 
+#endif
