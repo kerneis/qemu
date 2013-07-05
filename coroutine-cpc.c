@@ -93,6 +93,8 @@ get_thread(cpc_continuation *c)
 cpc_continuation *
 cpc_continuation_expand(struct cpc_continuation *c, int n)
 {
+    printf("%s: expanding %p with size %d\n", __func__, c, n);
+
     int size;
     cpc_thread *d, *t;
 
@@ -134,6 +136,8 @@ static CoroutineThreadState *coroutine_get_thread_state(void)
 {
     CoroutineThreadState *s = pthread_getspecific(thread_state_key);
 
+    printf("%s: thread specific key\n", __func__, s);
+
     if (!s) {
         s = g_malloc0(sizeof(*s));
         s->current = &s->leader.base;
@@ -148,12 +152,16 @@ Coroutine *qemu_coroutine_new(void)
 
     co = g_malloc0(sizeof(*co));
 
+    printf("%s: returning coroutine %p\n", __func__, co);
+
     return &co->base;
 }
 
 void qemu_coroutine_delete(Coroutine *co_)
 {
     CoroutineCPC *co = DO_UPCAST(CoroutineCPC, base, co_);
+
+    printf("%s: deleting coroutine %p\n", __func__, co);
 
     /* g_free(co->stack); */
     g_free(co);
@@ -166,6 +174,8 @@ CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
     CoroutineCPC *to = DO_UPCAST(CoroutineCPC, base, to_);
 
     CoroutineThreadState *s = coroutine_get_thread_state();
+
+    printf("%s: switching from coroutine %p to %p, action %d, thread state %p\n", __func__, from, to, action, s);
 
     s->current = to_;
 
@@ -181,12 +191,16 @@ Coroutine *qemu_coroutine_self(void)
 {
     CoroutineThreadState *s = coroutine_get_thread_state();
 
+    printf("%s: returning current coroutine %p\n", __func__, s);
+
     return s->current;
 }
 
 bool qemu_in_coroutine(void)
 {
     CoroutineThreadState *s = pthread_getspecific(thread_state_key);
+
+    printf("%s: returning current coroutine %p, caller %p\n", __func__, s, s ? s->current->caller : NULL);
 
     return s && s->current->caller;
 }
