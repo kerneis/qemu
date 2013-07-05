@@ -28,6 +28,8 @@ THE SOFTWARE.
 
 #include "block/coroutine_int.h"
 
+#include <pthread.h>
+
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
@@ -40,6 +42,23 @@ THE SOFTWARE.
 #define STATE_UNKNOWN -1
 #define STATE_SLEEPING -2
 #define STATE_DETACHED -3
+
+typedef struct {
+    Coroutine base;
+} CoroutineCPC;
+
+/**
+ * Per-thread coroutine bookkeeping
+ */
+typedef struct {
+    /** Currently executing coroutine */
+    Coroutine *current;
+
+    /** The default coroutine */
+    CoroutineCPC leader;
+} CoroutineThreadState;
+
+static pthread_key_t thread_state_key;
 
 typedef struct cpc_thread {
     struct cpc_thread *next;
@@ -111,28 +130,63 @@ cpc_continuation_expand(struct cpc_continuation *c, int n)
 }
 
 
+static CoroutineThreadState *coroutine_get_thread_state(void)
+{
+    CoroutineThreadState *s = pthread_getspecific(thread_state_key);
+
+    if (!s) {
+        s = g_malloc0(sizeof(*s));
+        s->current = &s->leader.base;
+        pthread_setspecific(thread_state_key, s);
+    }
+    return s;
+}
+
 Coroutine *qemu_coroutine_new(void)
 {
-	return NULL;
+    CoroutineCPC *co;
+
+    co = g_malloc0(sizeof(*co));
+
+    return &co->base;
 }
 
 void qemu_coroutine_delete(Coroutine *co_)
 {
-	;
+    CoroutineCPC *co = DO_UPCAST(CoroutineCPC, base, co_);
+
+    /* g_free(co->stack); */
+    g_free(co);
 }
 
 CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
                                       CoroutineAction action)
 {
-	return action;
+    CoroutineCPC *from = DO_UPCAST(CoroutineCPC, base, from_);
+    CoroutineCPC *to = DO_UPCAST(CoroutineCPC, base, to_);
+
+    CoroutineThreadState *s = coroutine_get_thread_state();
+
+    s->current = to_;
+
+    /* we need to transfer execution to to. we then return from this function when execution
+     * returns to *THIS* coroutine.
+     * we return the action, as in whether the thread terminated or yielded.
+     */
+
+    return 0;
 }
 
 Coroutine *qemu_coroutine_self(void)
 {
-	return NULL;
+    CoroutineThreadState *s = coroutine_get_thread_state();
+
+    return s->current;
 }
 
 bool qemu_in_coroutine(void)
 {
-	return false;
+    CoroutineThreadState *s = pthread_getspecific(thread_state_key);
+
+    return s && s->current->caller;
 }
