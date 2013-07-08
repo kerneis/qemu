@@ -136,7 +136,7 @@ static CoroutineThreadState *coroutine_get_thread_state(void)
 {
     CoroutineThreadState *s = pthread_getspecific(thread_state_key);
 
-    printf("%s: thread specific key\n", __func__, s);
+    printf("%s: thread specific key %p\n", __func__, s);
 
     if (!s) {
         s = g_malloc0(sizeof(*s));
@@ -167,7 +167,7 @@ void qemu_coroutine_delete(Coroutine *co_)
     g_free(co);
 }
 
-CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
+CoroutineAction coroutine_fn qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
                                       CoroutineAction action)
 {
     CoroutineCPC *from = DO_UPCAST(CoroutineCPC, base, from_);
@@ -179,12 +179,16 @@ CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
 
     s->current = to_;
 
+    /* void __attribute__((cps)) CoroutineEntry(void *opaque); */
+    CoroutineEntry f = to_->entry;
+    f(to_->entry_arg);
+
     /* we need to transfer execution to to. we then return from this function when execution
      * returns to *THIS* coroutine.
      * we return the action, as in whether the thread terminated or yielded.
      */
 
-    return 0;
+    return COROUTINE_YIELD;
 }
 
 Coroutine *qemu_coroutine_self(void)
