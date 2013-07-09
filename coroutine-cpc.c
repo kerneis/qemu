@@ -147,7 +147,11 @@ void qemu_coroutine_delete(Coroutine *co_)
     g_free(co);
 }
 
-CoroutineAction coroutine_fn qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
+struct arglist {
+   void *arg  __attribute__((__aligned__(16))) ;
+};
+
+CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
                                       CoroutineAction action)
 {
     CoroutineCPC *from = DO_UPCAST(CoroutineCPC, base, from_);
@@ -160,8 +164,19 @@ CoroutineAction coroutine_fn qemu_coroutine_switch(Coroutine *from_, Coroutine *
     s->current = to_;
 
     /* void __attribute__((cps)) CoroutineEntry(void *opaque); */
-    CoroutineEntry f = to_->entry;
-    f(to_->entry_arg);
+    /* CoroutineEntry f = to_->entry; */
+    /* need to push arg, then invoke to_->entry */
+    /* to_->entry(to_->entry_arg); */
+
+#define INITIAL_SIZE 512
+    struct cpc_continuation *c;
+    c = cpc_continuation_expand(NULL, INITIAL_SIZE);
+
+    struct arglist *a = (struct arglist *)cpc_alloc(&c, sizeof(struct arglist));
+    a->arg = to_->entry;
+
+    c = cpc_continuation_push(c, to_->entry);
+    cpc_invoke_continuation(c);
 
     /* we need to transfer execution to to. we then return from this function when execution
      * returns to *THIS* coroutine.
