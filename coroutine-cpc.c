@@ -62,7 +62,7 @@ static struct cpc_continuation *cont_alloc(unsigned size)
     struct cpc_continuation *r;
     if (size < 16)
         size = 16;
-    r = malloc(sizeof(*r) + size - 1);
+    r = g_malloc0(sizeof(*r) + size - 1);
     r->size = size - 1;
     return r;
 }
