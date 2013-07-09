@@ -39,9 +39,6 @@ THE SOFTWARE.
 #include <fcntl.h>
 #include <stddef.h>
 
-#define STATE_UNKNOWN -1
-#define STATE_SLEEPING -2
-#define STATE_DETACHED -3
 
 typedef struct {
     Coroutine base;
@@ -60,75 +57,41 @@ typedef struct {
 
 static pthread_key_t thread_state_key;
 
-typedef struct cpc_thread {
-    struct cpc_thread *next;
-    struct cpc_condvar *condvar;
-    struct cpc_thread *cond_next;
-    cpc_sched *sched;
-    int state;
-    struct cpc_continuation cont;
-} cpc_thread;
-
-struct cpc_thread *
-cpc_thread_get(int size)
+static struct cpc_continuation *cont_alloc(unsigned size)
 {
-    struct cpc_thread *t;
-    t = malloc(sizeof(struct cpc_thread) + (size - 1));
-    t->cont.size = size;
-    return t;
+    struct cpc_continuation *r;
+    if (size < 16)
+        size = 16;
+    r = malloc(sizeof(*r) + size - 1);
+    r->size = size - 1;
+    return r;
 }
 
-static inline cpc_continuation *
-get_cont(cpc_thread *t)
+static void cpc_continuation_free(struct cpc_continuation *c)
 {
-    return (cpc_continuation *)(((char *)t) + offsetof(struct cpc_thread, cont));
-}
-
-static inline cpc_thread *
-get_thread(cpc_continuation *c)
-{
-    return (cpc_thread *)(((char *)c) - offsetof(struct cpc_thread, cont));
+    free(c);
 }
 
 cpc_continuation *
 cpc_continuation_expand(struct cpc_continuation *c, int n)
 {
+    struct cpc_continuation *r;
+    int size;
+
     printf("%s: expanding %p with size %d\n", __func__, c, n);
 
-    int size;
-    cpc_thread *d, *t;
-
-    if(c == (void*)0)
-        size = n + 20;
-    else
-        size = c->size * 2 + n;
-
-    d = cpc_thread_get(size);
-
-    if(c == (void*)0) {
-        d->cont.length = 0;
-        d->condvar = NULL;
-        d->cond_next = NULL;
-        d->next = NULL;
-        d->sched = cpc_default_sched;
-        d->state = STATE_UNKNOWN;
-        return get_cont(d);
+    if(c == NULL) {
+        return cont_alloc(n + 20);
     }
 
-    t = get_thread(c);
+    size = c->size * 2 + n;
+    r = cont_alloc(size);
 
-    memcpy(d->cont.c, c->c, c->length);
+    memcpy(r->c, c->c, c->length);
+    r->length = c->length;
+    cpc_continuation_free(c);
 
-    d->cont.length = c->length;
-    d->condvar = t->condvar;
-    d->cond_next = t->cond_next;
-    d->next = t->next;
-    d->sched = t->sched;
-    d->state = t->state;
-
-    free(t);
-
-    return get_cont(d);
+    return r;
 }
 
 
