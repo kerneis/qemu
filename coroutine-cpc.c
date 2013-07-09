@@ -42,6 +42,7 @@ THE SOFTWARE.
 
 typedef struct {
     Coroutine base;
+    struct cpc_continuation *cont;
 } CoroutineCPC;
 
 /**
@@ -69,7 +70,7 @@ static struct cpc_continuation *cont_alloc(unsigned size)
 
 static void cpc_continuation_free(struct cpc_continuation *c)
 {
-    free(c);
+    //free(c);
 }
 
 cpc_continuation *
@@ -95,20 +96,23 @@ cpc_continuation_expand(struct cpc_continuation *c, int n)
 }
 
 
-static void cpc_invoke_continuation(struct cpc_continuation *c)
+static struct cpc_continuation *cpc_invoke_continuation(struct cpc_continuation *c)
 {
     cpc_function *f;
+    struct cpc_continuation *orig_c;
 
     while(c) {
       if(c->length == 0) {
         cpc_continuation_free(c);
-        return;
+        return NULL;
       }
 
       c->length -= PTR_SIZE;
       f = *(cpc_function**)(c->c + c->length);
+      orig_c = c;
       c = (*f)(c);
     }
+    return orig_c;
 }
 
 
@@ -130,7 +134,10 @@ Coroutine *qemu_coroutine_new(void)
 {
     CoroutineCPC *co;
 
+#define INITIAL_SIZE 512
+
     co = g_malloc0(sizeof(*co));
+    co->cont = cpc_continuation_expand(NULL, INITIAL_SIZE);
 
     printf("%s: returning coroutine %p\n", __func__, co);
 
@@ -143,7 +150,7 @@ void qemu_coroutine_delete(Coroutine *co_)
 
     printf("%s: deleting coroutine %p\n", __func__, co);
 
-    /* g_free(co->stack); */
+    cpc_continuation_free(co->cont);
     g_free(co);
 }
 
@@ -163,27 +170,21 @@ CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
 
     s->current = to_;
 
-    /* void __attribute__((cps)) CoroutineEntry(void *opaque); */
-    /* CoroutineEntry f = to_->entry; */
-    /* need to push arg, then invoke to_->entry */
-    /* to_->entry(to_->entry_arg); */
-
-#define INITIAL_SIZE 512
-    struct cpc_continuation *c;
-    c = cpc_continuation_expand(NULL, INITIAL_SIZE);
-
-    struct arglist *a = (struct arglist *)cpc_alloc(&c, sizeof(struct arglist));
+    struct arglist *a = (struct arglist *)cpc_alloc(&to->cont, sizeof(struct arglist));
     a->arg = to_->entry_arg;
 
-    c = cpc_continuation_push(c, to_->entry);
-    cpc_invoke_continuation(c);
+    to->cont = cpc_continuation_push(to->cont, to_->entry);
+    to->cont = cpc_invoke_continuation(to->cont);
 
     /* we need to transfer execution to to. we then return from this function when execution
      * returns to *THIS* coroutine.
      * we return the action, as in whether the thread terminated or yielded.
      */
 
-    return COROUTINE_YIELD;
+    if (!to->cont)
+        return COROUTINE_TERMINATE;
+    else
+        return COROUTINE_YIELD;
 }
 
 Coroutine *qemu_coroutine_self(void)

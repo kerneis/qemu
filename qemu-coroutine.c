@@ -118,18 +118,14 @@ void qemu_coroutine_enter(Coroutine *co, void *opaque)
     coroutine_swap(self, co);
 }
 
-void coroutine_fn qemu_coroutine_yield(void)
+
+struct cpc_continuation *
+q_c_yield(struct cpc_continuation *cont)
 {
     Coroutine *self = qemu_coroutine_self();
     Coroutine *to = self->caller;
 
-    trace_qemu_coroutine_yield(self, to);
-
-    if (!to) {
-        fprintf(stderr, "Co-routine is yielding to no one\n");
-        abort();
-    }
-
     self->caller = NULL;
     coroutine_swap(self, to);
+    return NULL;
 }
