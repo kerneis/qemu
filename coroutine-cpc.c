@@ -173,7 +173,7 @@ CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
     c = cpc_continuation_expand(NULL, INITIAL_SIZE);
 
     struct arglist *a = (struct arglist *)cpc_alloc(&c, sizeof(struct arglist));
-    a->arg = to_->entry;
+    a->arg = to_->entry_arg;
 
     c = cpc_continuation_push(c, to_->entry);
     cpc_invoke_continuation(c);
