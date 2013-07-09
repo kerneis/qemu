@@ -95,6 +95,23 @@ cpc_continuation_expand(struct cpc_continuation *c, int n)
 }
 
 
+static void cpc_invoke_continuation(struct cpc_continuation *c)
+{
+    cpc_function *f;
+
+    while(c) {
+      if(c->length == 0) {
+        cpc_continuation_free(c);
+        return;
+      }
+
+      c->length -= PTR_SIZE;
+      f = *(cpc_function**)(c->c + c->length);
+      c = (*f)(c);
+    }
+}
+
+
 static CoroutineThreadState *coroutine_get_thread_state(void)
 {
     CoroutineThreadState *s = pthread_getspecific(thread_state_key);
