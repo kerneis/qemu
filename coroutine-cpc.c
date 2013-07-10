@@ -134,10 +134,8 @@ Coroutine *qemu_coroutine_new(void)
 {
     CoroutineCPC *co;
 
-#define INITIAL_SIZE 512
-
     co = g_malloc0(sizeof(*co));
-    co->cont = cpc_continuation_expand(NULL, INITIAL_SIZE);
+    co->cont = NULL;
 
     printf("%s: returning coroutine %p\n", __func__, co);
 
@@ -170,10 +168,17 @@ CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
 
     s->current = to_;
 
-    struct arglist *a = (struct arglist *)cpc_alloc(&to->cont, sizeof(struct arglist));
-    a->arg = to_->entry_arg;
+    /* if we switch to leader, quit */
 
-    to->cont = cpc_continuation_push(to->cont, to_->entry);
+    if (!to->cont) {
+#define INITIAL_SIZE 512
+        to->cont = cpc_continuation_expand(NULL, INITIAL_SIZE);
+        struct arglist *a = (struct arglist *)cpc_alloc(&to->cont, sizeof(struct arglist));
+        a->arg = to_->entry_arg;
+        to->cont = cpc_continuation_push(to->cont, to_->entry);
+        printf("%s: initialising continuation stack to %p, entry func %p and entry arg %p\n", __func__, to->cont, to_->entry, to_->entry_arg);
+    }
+
     to->cont = cpc_invoke_continuation(to->cont);
 
     /* we need to transfer execution to to. we then return from this function when execution
