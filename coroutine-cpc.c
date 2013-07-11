@@ -79,8 +79,6 @@ cpc_continuation_expand(struct cpc_continuation *c, int n)
     struct cpc_continuation *r;
     int size;
 
-    printf("%s: expanding %p with size %d\n", __func__, c, n);
-
     if(c == NULL) {
         return cont_alloc(n + 20);
     }
@@ -137,8 +135,6 @@ static CoroutineThreadState *coroutine_get_thread_state(void)
 {
     CoroutineThreadState *s = pthread_getspecific(thread_state_key);
 
-    printf("%s: thread specific key %p\n", __func__, s);
-
     if (!s) {
         s = g_malloc0(sizeof(*s));
         s->current = &s->leader.base;
@@ -154,16 +150,12 @@ Coroutine *qemu_coroutine_new(void)
     co = g_malloc0(sizeof(*co));
     co->cont = NULL;
 
-    printf("%s: returning coroutine %p\n", __func__, co);
-
     return &co->base;
 }
 
 void qemu_coroutine_delete(Coroutine *co_)
 {
     CoroutineCPC *co = DO_UPCAST(CoroutineCPC, base, co_);
-
-    printf("%s: deleting coroutine %p\n", __func__, co);
 
     cpc_continuation_free(co->cont);
     g_free(co);
@@ -181,8 +173,6 @@ CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
 
     CoroutineThreadState *s = coroutine_get_thread_state();
 
-    printf("%s: switching from coroutine %p to %p, action %d, thread state %p\n", __func__, from, to, action, s);
-
     s->current = to_;
 
     /* if we switch to leader, quit */
@@ -193,7 +183,6 @@ CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
         struct arglist *a = (struct arglist *)cpc_alloc(&to->cont, sizeof(struct arglist));
         a->arg = to_->entry_arg;
         to->cont = cpc_continuation_push(to->cont, to_->entry);
-        printf("%s: initialising continuation stack to %p, entry func %p and entry arg %p\n", __func__, to->cont, to_->entry, to_->entry_arg);
     }
 
     if (to != &s->leader) {
@@ -215,16 +204,12 @@ Coroutine *qemu_coroutine_self(void)
 {
     CoroutineThreadState *s = coroutine_get_thread_state();
 
-    printf("%s: returning current coroutine %p\n", __func__, s);
-
     return s->current;
 }
 
 bool qemu_in_coroutine(void)
 {
     CoroutineThreadState *s = pthread_getspecific(thread_state_key);
-
-    printf("%s: returning current coroutine %p, caller %p\n", __func__, s, s ? s->current->caller : NULL);
 
     return s && s->current->caller;
 }
