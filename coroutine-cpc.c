@@ -23,13 +23,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#define NO_CPS_PROTO
-#include "cpc/cpc_runtime.h"
-
-#include "block/coroutine_int.h"
 
 #include <pthread.h>
-
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
@@ -38,6 +33,10 @@ THE SOFTWARE.
 #include <assert.h>
 #include <fcntl.h>
 #include <stddef.h>
+
+#include "cpc/cpc_runtime.h"
+#include "block/coroutine_int.h"
+
 
 
 typedef struct {
