@@ -115,6 +115,23 @@ static struct cpc_continuation *cpc_invoke_continuation(struct cpc_continuation 
     return orig_c;
 }
 
+static void qemu_coroutine_thread_cleanup(void *opaque)
+{
+    CoroutineThreadState *s = opaque;
+
+    g_free(s);
+}
+
+static void __attribute__((constructor)) coroutine_init(void)
+{
+    int ret;
+
+    ret = pthread_key_create(&thread_state_key, qemu_coroutine_thread_cleanup);
+    if (ret != 0) {
+        fprintf(stderr, "unable to create leader key: %s\n", strerror(errno));
+        abort();
+    }
+}
 
 static CoroutineThreadState *coroutine_get_thread_state(void)
 {
@@ -179,17 +196,19 @@ CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
         printf("%s: initialising continuation stack to %p, entry func %p and entry arg %p\n", __func__, to->cont, to_->entry, to_->entry_arg);
     }
 
-    to->cont = cpc_invoke_continuation(to->cont);
+    if (to != &s->leader) {
+        to->cont = cpc_invoke_continuation(to->cont);
+    }
 
-    /* we need to transfer execution to to. we then return from this function when execution
-     * returns to *THIS* coroutine.
-     * we return the action, as in whether the thread terminated or yielded.
-     */
-
-    if (!to->cont)
+    if (!to->cont) {
+        /* if we terminate, switch back to caller or leader? */
+        s->current = to_->caller;
+        if (!to_->caller)
+            s->current = &s->leader.base;
         return COROUTINE_TERMINATE;
-    else
+    } else {
         return COROUTINE_YIELD;
+    }
 }
 
 Coroutine *qemu_coroutine_self(void)
