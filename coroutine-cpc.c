@@ -96,7 +96,7 @@ cpc_continuation_expand(struct cpc_continuation *c, int n)
 static struct cpc_continuation *cpc_invoke_continuation(struct cpc_continuation *c)
 {
     cpc_function *f;
-    struct cpc_continuation *orig_c;
+    struct cpc_continuation *orig_c = NULL;
 
     while(c) {
       if(c->length == 0) {
