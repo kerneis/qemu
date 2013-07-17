@@ -119,13 +119,11 @@ void qemu_coroutine_enter(Coroutine *co, void *opaque)
 }
 
 
-struct cpc_continuation *
-q_c_yield(struct cpc_continuation *cont)
+void qemu_coroutine_yield(void)
 {
     Coroutine *self = qemu_coroutine_self();
     Coroutine *to = self->caller;
 
     self->caller = NULL;
     coroutine_swap(self, to);
-    return NULL;
 }

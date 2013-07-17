@@ -98,16 +98,19 @@ static struct cpc_continuation *cpc_invoke_continuation(struct cpc_continuation 
     cpc_function *f;
     struct cpc_continuation *orig_c = NULL;
 
-    while(c) {
-      if(c->length == 0) {
-        cpc_continuation_free(c);
-        return NULL;
-      }
+    while (true) {
+        if (c->length == 0) {
+            cpc_continuation_free(c);
+            return NULL;
+        }
 
-      c->length -= PTR_SIZE;
-      f = *(cpc_function**)(c->c + c->length);
-      orig_c = c;
-      c = (*f)(c);
+        c->length -= PTR_SIZE;
+        f = *(cpc_function**)(c->c + c->length);
+        orig_c = c;
+        c = (*f)(c);
+
+        if (f == qemu_coroutine_yield)
+            break;
     }
     return orig_c;
 }
