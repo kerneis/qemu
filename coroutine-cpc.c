@@ -95,10 +95,13 @@ cpc_continuation_expand(struct cpc_continuation *c, int n)
 
 static struct cpc_continuation *cpc_invoke_continuation(struct cpc_continuation *c)
 {
-    cpc_function *f;
-    struct cpc_continuation *orig_c = NULL;
+    cpc_function *f = NULL;
 
-    while (true) {
+    /* If the last function was a yield, return from the invocation when that
+     * function is done. */
+    while (f != qemu_coroutine_yield) {
+        /* If the continuation is empty, free it and return NULL, signalling
+         * this continuation terminated. */
         if (c->length == 0) {
             cpc_continuation_free(c);
             return NULL;
@@ -106,13 +109,9 @@ static struct cpc_continuation *cpc_invoke_continuation(struct cpc_continuation 
 
         c->length -= PTR_SIZE;
         f = *(cpc_function**)(c->c + c->length);
-        orig_c = c;
         c = (*f)(c);
-
-        if (f == qemu_coroutine_yield)
-            break;
     }
-    return orig_c;
+    return c;
 }
 
 static void qemu_coroutine_thread_cleanup(void *opaque)
