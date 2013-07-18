@@ -58,21 +58,17 @@ This is broken on some architectures.
 
 #endif
 
-typedef struct cpc_condvar cpc_condvar;
-typedef struct cpc_sched cpc_sched;
-extern cpc_sched *cpc_default_threadpool;
-#define cpc_default_sched NULL
-
 typedef struct cpc_continuation {
     unsigned short length;
     unsigned short size;
+    const char *magic;
 #ifdef CPC_INDIRECT_PATCH
     void *cpc_retval; // where to write the next return value
 #endif
     char c[1];
 } cpc_continuation;
 
-extern void cpc_print_continuation(struct cpc_continuation *c, char *s);
+//extern void cpc_print_continuation(struct cpc_continuation *c, char *s);
 
 typedef cpc_continuation *cpc_function(void*);
 
@@ -101,10 +97,6 @@ cpc_dealloc(struct cpc_continuation *c, int s)
     return c->c + c->length;
 }
 
-#define CPC_IO_IN 1
-#define CPC_IO_OUT 2
-#define CPC_TIMEOUT 4
-#define CPC_CONDVAR 8
 
 static inline struct cpc_continuation *
 cpc_continuation_push(cpc_continuation *c, cpc_function *f)

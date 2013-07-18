@@ -60,10 +60,14 @@ static pthread_key_t thread_state_key;
 static struct cpc_continuation *cont_alloc(unsigned size)
 {
     struct cpc_continuation *r;
+    const char MAGIC_ALLOC[] = "ALLOCATED";
+
     if (size < 16)
         size = 16;
     r = g_malloc0(sizeof(*r) + size - 1);
+
     r->size = size - 1;
+    r->magic = MAGIC_ALLOC;
     return r;
 }
 
@@ -95,6 +99,9 @@ cpc_continuation_expand(struct cpc_continuation *c, int n)
 
 static struct cpc_continuation *cpc_invoke_continuation(struct cpc_continuation *c)
 {
+    const char MAGIC_INVOKE[] = "INVOKED";
+    const char MAGIC_YIELD[] = "YIELDED";
+    //const char MAGIC_TERM[] = "TERMINATED";
     cpc_function *f = NULL;
 
     /* If the last function was a yield, return from the invocation when that
@@ -106,11 +113,13 @@ static struct cpc_continuation *cpc_invoke_continuation(struct cpc_continuation 
             cpc_continuation_free(c);
             return NULL;
         }
+        c->magic = MAGIC_INVOKE;
 
         c->length -= PTR_SIZE;
         f = *(cpc_function**)(c->c + c->length);
         c = (*f)(c);
     }
+    c->magic = MAGIC_YIELD;
     return c;
 }
 
