@@ -39,6 +39,9 @@
  * static checker support for catching such errors.  This annotation might make
  * it possible and in the meantime it serves as documentation.
  *
+ * A function must be marked with coroutine_fn if it can yield execution, either
+ * directly or indirectly.
+ *
  * For example:
  *
  *   static void coroutine_fn foo(void) {
@@ -86,7 +89,7 @@ void coroutine_fn qemu_coroutine_yield(void);
 /**
  * Get the currently executing coroutine
  */
-Coroutine *coroutine_fn qemu_coroutine_self(void);
+Coroutine *qemu_coroutine_self(void);
 
 /**
  * Return whether or not currently inside a coroutine
