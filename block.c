@@ -164,7 +164,7 @@ bool bdrv_io_limits_enabled(BlockDriverState *bs)
          || io_limits->iops[BLOCK_IO_LIMIT_TOTAL];
 }
 
-static void bdrv_io_limits_intercept(BlockDriverState *bs,
+static void coroutine_fn bdrv_io_limits_intercept(BlockDriverState *bs,
                                      bool is_write, int nb_sectors)
 {
     int64_t wait_time = -1;
