@@ -2460,6 +2460,7 @@ int bdrv_pwrite_sync(BlockDriverState *bs, int64_t offset,
  *
  * Returns 0 on success, -errno in error cases.
  */
+#if 0
 int coroutine_fn bdrv_co_pwrite_sync(BlockDriverState *bs, int64_t offset,
     const void *buf, int count)
 {
@@ -2477,6 +2478,7 @@ int coroutine_fn bdrv_co_pwrite_sync(BlockDriverState *bs, int64_t offset,
 
     return 0;
 }
+#endif
 
 static int coroutine_fn bdrv_co_do_copy_on_readv(BlockDriverState *bs,
         int64_t sector_num, int nb_sectors, QEMUIOVector *qiov)
@@ -4241,7 +4243,7 @@ static int bdrv_sync_rwco(static void coroutine_fn (*co_fn)(void *), RwCo *rwco)
 {
     Coroutine *co;
     co = qemu_coroutine_create(co_fn);
-    qemu_coroutine_enter(co, &rwco);
+    qemu_coroutine_enter(co, rwco);
     while (rwco->ret == NOT_DONE) {
         qemu_aio_wait();
     }

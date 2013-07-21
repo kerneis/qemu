@@ -256,7 +256,7 @@ static int nbd_config(BDRVNBDState *s, QDict *options)
 }
 
 
-static void nbd_coroutine_start(BDRVNBDState *s, struct nbd_request *request)
+static void coroutine_fn nbd_coroutine_start(BDRVNBDState *s, struct nbd_request *request)
 {
     int i;
 
@@ -334,7 +334,7 @@ static void nbd_restart_write(void *opaque)
     qemu_coroutine_enter(s->send_coroutine, NULL);
 }
 
-static int nbd_co_send_request(BDRVNBDState *s, struct nbd_request *request,
+static int coroutine_fn nbd_co_send_request(BDRVNBDState *s, struct nbd_request *request,
                                QEMUIOVector *qiov, int offset)
 {
     int rc, ret;
@@ -368,7 +368,7 @@ static int nbd_co_send_request(BDRVNBDState *s, struct nbd_request *request,
     return rc;
 }
 
-static void nbd_co_receive_reply(BDRVNBDState *s, struct nbd_request *request,
+static void coroutine_fn nbd_co_receive_reply(BDRVNBDState *s, struct nbd_request *request,
                                  struct nbd_reply *reply,
                                  QEMUIOVector *qiov, int offset)
 {
@@ -394,7 +394,7 @@ static void nbd_co_receive_reply(BDRVNBDState *s, struct nbd_request *request,
     }
 }
 
-static void nbd_coroutine_end(BDRVNBDState *s, struct nbd_request *request)
+static void coroutine_fn nbd_coroutine_end(BDRVNBDState *s, struct nbd_request *request)
 {
     int i = HANDLE_TO_INDEX(s, request->handle);
     s->recv_coroutine[i] = NULL;
@@ -485,7 +485,7 @@ static int nbd_open(BlockDriverState *bs, QDict *options, int flags)
     return result;
 }
 
-static int nbd_co_readv_1(BlockDriverState *bs, int64_t sector_num,
+static int coroutine_fn nbd_co_readv_1(BlockDriverState *bs, int64_t sector_num,
                           int nb_sectors, QEMUIOVector *qiov,
                           int offset)
 {
@@ -510,7 +510,7 @@ static int nbd_co_readv_1(BlockDriverState *bs, int64_t sector_num,
 
 }
 
-static int nbd_co_writev_1(BlockDriverState *bs, int64_t sector_num,
+static int coroutine_fn nbd_co_writev_1(BlockDriverState *bs, int64_t sector_num,
                            int nb_sectors, QEMUIOVector *qiov,
                            int offset)
 {
@@ -542,7 +542,7 @@ static int nbd_co_writev_1(BlockDriverState *bs, int64_t sector_num,
  * remain aligned to 4K. */
 #define NBD_MAX_SECTORS 2040
 
-static int nbd_co_readv(BlockDriverState *bs, int64_t sector_num,
+static int coroutine_fn nbd_co_readv(BlockDriverState *bs, int64_t sector_num,
                         int nb_sectors, QEMUIOVector *qiov)
 {
     int offset = 0;
@@ -559,7 +559,7 @@ static int nbd_co_readv(BlockDriverState *bs, int64_t sector_num,
     return nbd_co_readv_1(bs, sector_num, nb_sectors, qiov, offset);
 }
 
-static int nbd_co_writev(BlockDriverState *bs, int64_t sector_num,
+static int coroutine_fn nbd_co_writev(BlockDriverState *bs, int64_t sector_num,
                          int nb_sectors, QEMUIOVector *qiov)
 {
     int offset = 0;
@@ -576,7 +576,7 @@ static int nbd_co_writev(BlockDriverState *bs, int64_t sector_num,
     return nbd_co_writev_1(bs, sector_num, nb_sectors, qiov, offset);
 }
 
-static int nbd_co_flush(BlockDriverState *bs)
+static int coroutine_fn nbd_co_flush(BlockDriverState *bs)
 {
     BDRVNBDState *s = bs->opaque;
     struct nbd_request request;
@@ -606,7 +606,7 @@ static int nbd_co_flush(BlockDriverState *bs)
     return -reply.error;
 }
 
-static int nbd_co_discard(BlockDriverState *bs, int64_t sector_num,
+static int coroutine_fn nbd_co_discard(BlockDriverState *bs, int64_t sector_num,
                           int nb_sectors)
 {
     BDRVNBDState *s = bs->opaque;

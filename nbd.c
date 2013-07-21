@@ -122,18 +122,19 @@ struct NBDClient {
 
 /* That's all folks */
 
+ssize_t coroutine_fn nbd_wr_sync_co(int fd, void *buffer, size_t size, bool do_read)
+{
+    if (do_read) {
+        return qemu_co_recv(fd, buffer, size);
+    } else {
+        return qemu_co_send(fd, buffer, size);
+    }
+}
+
 ssize_t nbd_wr_sync(int fd, void *buffer, size_t size, bool do_read)
 {
     size_t offset = 0;
     int err;
-
-    if (qemu_in_coroutine()) {
-        if (do_read) {
-            return qemu_co_recv(fd, buffer, size);
-        } else {
-            return qemu_co_send(fd, buffer, size);
-        }
-    }
 
     while (offset < size) {
         ssize_t len;
@@ -971,7 +972,7 @@ static int nbd_can_read(void *opaque);
 static void nbd_read(void *opaque);
 static void nbd_restart_write(void *opaque);
 
-static ssize_t nbd_co_send_reply(NBDRequest *req, struct nbd_reply *reply,
+static ssize_t coroutine_fn nbd_co_send_reply(NBDRequest *req, struct nbd_reply *reply,
                                  int len)
 {
     NBDClient *client = req->client;
@@ -1003,7 +1004,7 @@ static ssize_t nbd_co_send_reply(NBDRequest *req, struct nbd_reply *reply,
     return rc;
 }
 
-static ssize_t nbd_co_receive_request(NBDRequest *req, struct nbd_request *request)
+static ssize_t coroutine_fn nbd_co_receive_request(NBDRequest *req, struct nbd_request *request)
 {
     NBDClient *client = req->client;
     int csock = client->sock;
@@ -1055,7 +1056,7 @@ out:
     return rc;
 }
 
-static void nbd_trip(void *opaque)
+static void coroutine_fn nbd_trip(void *opaque)
 {
     NBDClient *client = opaque;
     NBDExport *exp = client->exp;

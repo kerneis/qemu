@@ -888,7 +888,7 @@ static coroutine_fn int ssh_co_readv(BlockDriverState *bs,
     return ret;
 }
 
-static int ssh_write(BDRVSSHState *s,
+static int coroutine_fn ssh_write(BDRVSSHState *s,
                      int64_t offset, size_t size,
                      QEMUIOVector *qiov)
 {

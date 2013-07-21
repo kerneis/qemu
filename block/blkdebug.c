@@ -494,7 +494,7 @@ static void blkdebug_close(BlockDriverState *bs)
     }
 }
 
-static void suspend_request(BlockDriverState *bs, BlkdebugRule *rule)
+static void coroutine_fn suspend_request(BlockDriverState *bs, BlkdebugRule *rule)
 {
     BDRVBlkdebugState *s = bs->opaque;
     BlkdebugSuspendedReq r;
@@ -515,7 +515,7 @@ static void suspend_request(BlockDriverState *bs, BlkdebugRule *rule)
     g_free(r.tag);
 }
 
-static bool process_rule(BlockDriverState *bs, struct BlkdebugRule *rule,
+static bool coroutine_fn process_rule(BlockDriverState *bs, struct BlkdebugRule *rule,
     bool injected)
 {
     BDRVBlkdebugState *s = bs->opaque;
@@ -546,7 +546,7 @@ static bool process_rule(BlockDriverState *bs, struct BlkdebugRule *rule,
     return injected;
 }
 
-static void blkdebug_debug_event(BlockDriverState *bs, BlkDebugEvent event)
+static void coroutine_fn blkdebug_debug_event(BlockDriverState *bs, BlkDebugEvent event)
 {
     BDRVBlkdebugState *s = bs->opaque;
     struct BlkdebugRule *rule, *next;

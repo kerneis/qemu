@@ -590,14 +590,10 @@ static int do_req(int sockfd, SheepdogReq *hdr, void *data,
         .finished = false,
     };
 
-    if (qemu_in_coroutine()) {
-        do_co_req(&srco);
-    } else {
-        co = qemu_coroutine_create(do_co_req);
-        qemu_coroutine_enter(co, &srco);
-        while (!srco.finished) {
-            qemu_aio_wait();
-        }
+    co = qemu_coroutine_create(do_co_req);
+    qemu_coroutine_enter(co, &srco);
+    while (!srco.finished) {
+        qemu_aio_wait();
     }
 
     return srco.ret;

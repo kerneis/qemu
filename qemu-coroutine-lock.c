@@ -124,7 +124,7 @@ void coroutine_fn qemu_co_mutex_lock(CoMutex *mutex)
     trace_qemu_co_mutex_lock_return(mutex, self);
 }
 
-void coroutine_fn qemu_co_mutex_unlock(CoMutex *mutex)
+void qemu_co_mutex_unlock(CoMutex *mutex)
 {
     Coroutine *self = qemu_coroutine_self();
 
@@ -145,7 +145,7 @@ void qemu_co_rwlock_init(CoRwlock *lock)
     qemu_co_queue_init(&lock->queue);
 }
 
-void qemu_co_rwlock_rdlock(CoRwlock *lock)
+void coroutine_fn qemu_co_rwlock_rdlock(CoRwlock *lock)
 {
     while (lock->writer) {
         qemu_co_queue_wait(&lock->queue);
@@ -169,7 +169,7 @@ void qemu_co_rwlock_unlock(CoRwlock *lock)
     }
 }
 
-void qemu_co_rwlock_wrlock(CoRwlock *lock)
+void coroutine_fn qemu_co_rwlock_wrlock(CoRwlock *lock)
 {
     while (lock->writer || lock->reader) {
         qemu_co_queue_wait(&lock->queue);
