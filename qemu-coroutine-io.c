@@ -24,6 +24,7 @@
  */
 #include "qemu-common.h"
 #include "qemu/sockets.h"
+#include "qemu-send.h"
 #include "block/coroutine.h"
 #include "qemu/iov.h"
 

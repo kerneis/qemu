@@ -16,8 +16,6 @@
 #include "config-host.h"
 #include "qemu/typedefs.h"
 
-#include "cpc/cpc_runtime.h"
-
 #if defined(__arm__) || defined(__sparc__) || defined(__mips__) || defined(__hppa__) || defined(__ia64__)
 #define WORDS_ALIGNED
 #endif
@@ -297,29 +295,6 @@ struct qemu_work_item {
     int done;
 };
 
-
-/**
- * Sends a (part of) iovec down a socket, yielding when the socket is full, or
- * Receives data into a (part of) iovec from a socket,
- * yielding when there is no data in the socket.
- * The same interface as qemu_sendv_recvv(), with added yielding.
- * XXX should mark these as coroutine_fn
- */
-ssize_t coroutine_fn qemu_co_sendv_recvv(int sockfd, struct iovec *iov, unsigned iov_cnt,
-                            size_t offset, size_t bytes, bool do_send);
-#define qemu_co_recvv(sockfd, iov, iov_cnt, offset, bytes) \
-  qemu_co_sendv_recvv(sockfd, iov, iov_cnt, offset, bytes, false)
-#define qemu_co_sendv(sockfd, iov, iov_cnt, offset, bytes) \
-  qemu_co_sendv_recvv(sockfd, iov, iov_cnt, offset, bytes, true)
-
-/**
- * The same as above, but with just a single buffer
- */
-ssize_t coroutine_fn qemu_co_send_recv(int sockfd, void *buf, size_t bytes, bool do_send);
-#define qemu_co_recv(sockfd, buf, bytes) \
-  qemu_co_send_recv(sockfd, buf, bytes, false)
-#define qemu_co_send(sockfd, buf, bytes) \
-  qemu_co_send_recv(sockfd, buf, bytes, true)
 
 typedef struct QEMUIOVector {
     struct iovec *iov;

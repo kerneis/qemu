@@ -13,6 +13,7 @@
  */
 
 #include "qemu-common.h"
+#include "qemu-send.h"
 #include "qemu/uri.h"
 #include "qemu/error-report.h"
 #include "qemu/sockets.h"

@@ -36,6 +36,7 @@
 #include <linux/fs.h>
 #endif
 
+#include "qemu-send.h"
 #include "qemu/sockets.h"
 #include "qemu/queue.h"
 
