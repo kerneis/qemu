@@ -61,7 +61,7 @@ static inline void trace_event_set_state_dynamic(TraceEvent *ev, bool state)
 {
     assert(ev != NULL);
     assert(trace_event_get_state_static(ev));
-    return trace_event_set_state_dynamic_backend(ev, state);
+    trace_event_set_state_dynamic_backend(ev, state);
 }
 
 #endif  /* TRACE__CONTROL_INTERNAL_H */
