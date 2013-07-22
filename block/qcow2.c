@@ -1201,7 +1201,7 @@ static int qcow2_change_backing_file(BlockDriverState *bs,
     return qcow2_update_header(bs);
 }
 
-static int preallocate(BlockDriverState *bs)
+static int coroutine_fn preallocate(BlockDriverState *bs)
 {
     uint64_t nb_sectors;
     uint64_t offset;
@@ -1248,7 +1248,7 @@ static int preallocate(BlockDriverState *bs)
     if (host_offset != 0) {
         uint8_t buf[512];
         memset(buf, 0, 512);
-        ret = bdrv_write(bs->file, (host_offset >> 9) + num - 1, buf, 1);
+        ret = bdrv_co_write(bs->file, (host_offset >> 9) + num - 1, buf, 1);
         if (ret < 0) {
             return ret;
         }
@@ -1257,7 +1257,7 @@ static int preallocate(BlockDriverState *bs)
     return 0;
 }
 
-static int qcow2_create2(const char *filename, int64_t total_size,
+static int coroutine_fn qcow2_create2(const char *filename, int64_t total_size,
                          const char *backing_file, const char *backing_format,
                          int flags, size_t cluster_size, int prealloc,
                          QEMUOptionParameter *options, int version)
@@ -1380,9 +1380,9 @@ static int qcow2_create2(const char *filename, int64_t total_size,
     /* And if we're supposed to preallocate metadata, do that now */
     if (prealloc) {
         BDRVQcowState *s = bs->opaque;
-        //qemu_co_mutex_lock(&s->lock);
+        qemu_co_mutex_lock(&s->lock);
         ret = preallocate(bs);
-        //qemu_co_mutex_unlock(&s->lock);
+        qemu_co_mutex_unlock(&s->lock);
         if (ret < 0) {
             goto out;
         }
@@ -1394,7 +1394,38 @@ out:
     return ret;
 }
 
+struct qcow2_create_opts {
+    const char *filename;
+    QEMUOptionParameter *options;
+    int ret;
+};
+
+static int coroutine_fn qcow2_create_enter(void *opaque)
+{
+    struct qcow2_create_opts *s = opaque;
+    s->ret = qcow2_create_parse(s->filename, s->options);
+}
+
 static int qcow2_create(const char *filename, QEMUOptionParameter *options)
+{
+    Coroutine *co;
+    struct qcow2_create_opts qco = {
+        .filename = filename,
+        .options = options,
+        .ret = 1,
+    };
+
+    co = qemu_coroutine_create(qcow2_create_enter);
+    qemu_coroutine_enter(co, &qco);
+    while (qco.ret == 1) {
+        qemu_aio_wait();
+    }
+
+    return qco.ret;
+}
+
+
+static int coroutine_fn qcow2_create_parse(const char *filename, QEMUOptionParameter *options)
 {
     const char *backing_file = NULL;
     const char *backing_fmt = NULL;
