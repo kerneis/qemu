@@ -372,9 +372,7 @@ typedef struct CreateCo {
 static void coroutine_fn bdrv_create_co_entry(void *opaque)
 {
     CreateCo *cco = opaque;
-    assert(cco->drv);
-
-    cco->ret = cco->drv->bdrv_create(cco->filename, cco->options);
+    cco->ret = bdrv_co_create(cco->drv, cco->filename, cco->options);
 }
 
 int coroutine_fn bdrv_co_create(BlockDriver *drv, const char* filename,
@@ -382,24 +380,14 @@ int coroutine_fn bdrv_co_create(BlockDriver *drv, const char* filename,
 {
     int ret;
 
-    Coroutine *co;
-    CreateCo cco = {
-        .drv = drv,
-        .filename = g_strdup(filename),
-        .options = options,
-        .ret = NOT_DONE,
-    };
-
+    assert(drv);
     if (!drv->bdrv_create) {
-        ret = -ENOTSUP;
-        goto out;
+        return -ENOTSUP;
     }
 
-    bdrv_create_co_entry(&cco);
-    ret = cco.ret;
-
-out:
-    g_free(cco.filename);
+    filename = g_strdup(filename);
+    ret = drv->bdrv_create(filename, options);
+    g_free(filename);
     return ret;
 }
 
@@ -407,20 +395,13 @@ out:
 int bdrv_create(BlockDriver *drv, const char* filename,
     QEMUOptionParameter *options)
 {
-    int ret;
-
     Coroutine *co;
     CreateCo cco = {
         .drv = drv,
-        .filename = g_strdup(filename),
+        .filename = filename,
         .options = options,
         .ret = NOT_DONE,
     };
-
-    if (!drv->bdrv_create) {
-        ret = -ENOTSUP;
-        goto out;
-    }
 
     co = qemu_coroutine_create(bdrv_create_co_entry);
     qemu_coroutine_enter(co, &cco);
@@ -428,11 +409,7 @@ int bdrv_create(BlockDriver *drv, const char* filename,
         qemu_aio_wait();
     }
 
-    ret = cco.ret;
-
-out:
-    g_free(cco.filename);
-    return ret;
+    return cco.ret;
 }
 
 int bdrv_create_file(const char* filename, QEMUOptionParameter *options)
