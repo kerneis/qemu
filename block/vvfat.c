@@ -2902,7 +2902,7 @@ static void write_target_close(BlockDriverState *bs) {
 
 static BlockDriver vvfat_write_target = {
     .format_name        = "vvfat_write_target",
-    .bdrv_write         = write_target_commit,
+    .bdrv_co_write      = write_target_commit,
     .bdrv_close         = write_target_close,
 };
 
@@ -2984,8 +2984,8 @@ static BlockDriver bdrv_vvfat = {
     .bdrv_close             = vvfat_close,
     .bdrv_rebind            = vvfat_rebind,
 
-    .bdrv_read              = vvfat_co_read,
-    .bdrv_write             = vvfat_co_write,
+    .bdrv_co_read           = vvfat_co_read,
+    .bdrv_co_write          = vvfat_co_write,
     .bdrv_co_is_allocated   = vvfat_co_is_allocated,
 };
 

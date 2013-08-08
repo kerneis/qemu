@@ -344,8 +344,8 @@ static BlockDriver bdrv_cow = {
     .bdrv_co_create = cow_co_create,
     .bdrv_has_zero_init     = bdrv_has_zero_init_1,
 
-    .bdrv_read              = cow_co_read,
-    .bdrv_write             = cow_co_write,
+    .bdrv_co_read           = cow_co_read,
+    .bdrv_co_write          = cow_co_write,
     .bdrv_co_is_allocated   = cow_co_is_allocated,
 
     .create_options = cow_create_options,

@@ -193,7 +193,7 @@ static BlockDriver bdrv_cloop = {
     .instance_size  = sizeof(BDRVCloopState),
     .bdrv_probe     = cloop_probe,
     .bdrv_co_open   = cloop_open,
-    .bdrv_read      = cloop_co_read,
+    .bdrv_co_read   = cloop_co_read,
     .bdrv_close     = cloop_close,
 };
 
