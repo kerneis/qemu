@@ -53,7 +53,8 @@ static int cloop_probe(const uint8_t *buf, int buf_size, const char *filename)
     return 0;
 }
 
-static int cloop_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn cloop_open(BlockDriverState *bs, QDict *options,
+                                   int flags)
 {
     BDRVCloopState *s = bs->opaque;
     uint32_t offsets_size, max_compressed_block_size = 1, i;
@@ -191,7 +192,7 @@ static BlockDriver bdrv_cloop = {
     .format_name    = "cloop",
     .instance_size  = sizeof(BDRVCloopState),
     .bdrv_probe     = cloop_probe,
-    .bdrv_open      = cloop_open,
+    .bdrv_co_open   = cloop_open,
     .bdrv_read      = cloop_co_read,
     .bdrv_close     = cloop_close,
 };

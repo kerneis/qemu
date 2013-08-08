@@ -1259,7 +1259,8 @@ static QemuOptsList runtime_opts = {
     },
 };
 
-static int sd_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn sd_co_open(BlockDriverState *bs, QDict *options,
+                                   int flags)
 {
     int ret, fd;
     uint32_t vid = 0;
@@ -2187,8 +2188,9 @@ out:
     return found;
 }
 
-static int do_load_save_vmstate(BDRVSheepdogState *s, uint8_t *data,
-                                int64_t pos, int size, int load)
+static int coroutine_fn do_load_save_vmstate(BDRVSheepdogState *s,
+                                             uint8_t *data, int64_t pos,
+                                             int size, int load)
 {
     bool create;
     int fd, ret = 0, remaining = size;
@@ -2345,7 +2347,7 @@ static BlockDriver bdrv_sheepdog = {
     .format_name    = "sheepdog",
     .protocol_name  = "sheepdog",
     .instance_size  = sizeof(BDRVSheepdogState),
-    .bdrv_file_open = sd_open,
+    .bdrv_co_file_open = sd_co_open,
     .bdrv_close     = sd_close,
     .bdrv_co_create    = sd_co_create,
     .bdrv_has_zero_init = bdrv_has_zero_init_1,
@@ -2373,7 +2375,7 @@ static BlockDriver bdrv_sheepdog_tcp = {
     .format_name    = "sheepdog",
     .protocol_name  = "sheepdog+tcp",
     .instance_size  = sizeof(BDRVSheepdogState),
-    .bdrv_file_open = sd_open,
+    .bdrv_co_file_open = sd_co_open,
     .bdrv_close     = sd_close,
     .bdrv_co_create    = sd_co_create,
     .bdrv_has_zero_init = bdrv_has_zero_init_1,
@@ -2401,7 +2403,7 @@ static BlockDriver bdrv_sheepdog_unix = {
     .format_name    = "sheepdog",
     .protocol_name  = "sheepdog+unix",
     .instance_size  = sizeof(BDRVSheepdogState),
-    .bdrv_file_open = sd_open,
+    .bdrv_co_file_open = sd_co_open,
     .bdrv_close     = sd_close,
     .bdrv_co_create    = sd_co_create,
     .bdrv_has_zero_init = bdrv_has_zero_init_1,

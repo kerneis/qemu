@@ -116,7 +116,8 @@ static QemuOptsList runtime_opts = {
     },
 };
 
-static int blkverify_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn blkverify_co_open(BlockDriverState *bs,
+                                          QDict *options, int flags)
 {
     BDRVBlkverifyState *s = bs->opaque;
     QemuOpts *opts;
@@ -405,7 +406,7 @@ static BlockDriver bdrv_blkverify = {
     .instance_size          = sizeof(BDRVBlkverifyState),
 
     .bdrv_parse_filename    = blkverify_parse_filename,
-    .bdrv_file_open         = blkverify_open,
+    .bdrv_co_file_open      = blkverify_co_open,
     .bdrv_close             = blkverify_close,
     .bdrv_getlength         = blkverify_getlength,
 

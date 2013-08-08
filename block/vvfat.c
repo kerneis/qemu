@@ -1065,7 +1065,8 @@ static void vvfat_parse_filename(const char *filename, QDict *options,
     qdict_put(options, "rw", qbool_from_int(rw));
 }
 
-static int vvfat_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn vvfat_co_open(BlockDriverState *bs, QDict *options,
+                                      int flags)
 {
     BDRVVVFATState *s = bs->opaque;
     int cyls, heads, secs;
@@ -2886,8 +2887,9 @@ static int coroutine_fn vvfat_co_is_allocated(BlockDriverState *bs,
     return 1;
 }
 
-static int write_target_commit(BlockDriverState *bs, int64_t sector_num,
-	const uint8_t* buffer, int nb_sectors) {
+static int coroutine_fn write_target_commit(BlockDriverState *bs,
+   int64_t sector_num, const uint8_t* buffer, int nb_sectors)
+{
     BDRVVVFATState* s = *((BDRVVVFATState**) bs->opaque);
     return try_commit(s);
 }
@@ -2978,7 +2980,7 @@ static BlockDriver bdrv_vvfat = {
     .instance_size          = sizeof(BDRVVVFATState),
 
     .bdrv_parse_filename    = vvfat_parse_filename,
-    .bdrv_file_open         = vvfat_open,
+    .bdrv_co_file_open      = vvfat_co_open,
     .bdrv_close             = vvfat_close,
     .bdrv_rebind            = vvfat_rebind,
 

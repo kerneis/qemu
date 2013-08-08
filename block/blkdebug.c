@@ -349,7 +349,8 @@ static QemuOptsList runtime_opts = {
     },
 };
 
-static int blkdebug_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn blkdebug_open(BlockDriverState *bs, QDict *options,
+                                      int flags)
 {
     BDRVBlkdebugState *s = bs->opaque;
     QemuOpts *opts;
@@ -626,7 +627,7 @@ static BlockDriver bdrv_blkdebug = {
     .instance_size          = sizeof(BDRVBlkdebugState),
 
     .bdrv_parse_filename    = blkdebug_parse_filename,
-    .bdrv_file_open         = blkdebug_open,
+    .bdrv_co_file_open      = blkdebug_open,
     .bdrv_close             = blkdebug_close,
     .bdrv_getlength         = blkdebug_getlength,
 

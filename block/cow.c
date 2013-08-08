@@ -58,7 +58,8 @@ static int cow_probe(const uint8_t *buf, int buf_size, const char *filename)
         return 0;
 }
 
-static int cow_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn cow_co_open(BlockDriverState *bs, QDict *options,
+                                    int flags)
 {
     BDRVCowState *s = bs->opaque;
     struct cow_header_v2 cow_header;
@@ -338,7 +339,7 @@ static BlockDriver bdrv_cow = {
     .instance_size  = sizeof(BDRVCowState),
 
     .bdrv_probe     = cow_probe,
-    .bdrv_open      = cow_open,
+    .bdrv_co_open   = cow_co_open,
     .bdrv_close     = cow_close,
     .bdrv_co_create = cow_co_create,
     .bdrv_has_zero_init     = bdrv_has_zero_init_1,

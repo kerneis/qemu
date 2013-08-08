@@ -364,7 +364,8 @@ static int vdi_probe(const uint8_t *buf, int buf_size, const char *filename)
     return result;
 }
 
-static int vdi_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn vdi_co_open(BlockDriverState *bs, QDict *options,
+                                    int flags)
 {
     BDRVVdiState *s = bs->opaque;
     VdiHeader header;
@@ -776,7 +777,7 @@ static BlockDriver bdrv_vdi = {
     .format_name = "vdi",
     .instance_size = sizeof(BDRVVdiState),
     .bdrv_probe = vdi_probe,
-    .bdrv_open = vdi_open,
+    .bdrv_co_open = vdi_co_open,
     .bdrv_close = vdi_close,
     .bdrv_reopen_prepare = vdi_reopen_prepare,
     .bdrv_co_create = vdi_co_create,

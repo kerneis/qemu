@@ -155,7 +155,8 @@ static int vpc_probe(const uint8_t *buf, int buf_size, const char *filename)
     return 0;
 }
 
-static int vpc_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn vpc_co_open(BlockDriverState *bs, QDict *options,
+                                    int flags)
 {
     BDRVVPCState *s = bs->opaque;
     int i;
@@ -832,7 +833,7 @@ static BlockDriver bdrv_vpc = {
     .instance_size  = sizeof(BDRVVPCState),
 
     .bdrv_probe             = vpc_probe,
-    .bdrv_open              = vpc_open,
+    .bdrv_co_open           = vpc_co_open,
     .bdrv_close             = vpc_close,
     .bdrv_reopen_prepare    = vpc_reopen_prepare,
     .bdrv_co_create         = vpc_co_create,
