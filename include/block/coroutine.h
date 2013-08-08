@@ -37,6 +37,14 @@
  * static checker support for catching such errors.  This annotation might make
  * it possible and in the meantime it serves as documentation.
  *
+ * A function must be marked with coroutine_fn if it can yield execution, either
+ * directly or indirectly.
+ *
+ * Some functions dynamically determine whether to yield or not based on
+ * whether they are executing in a coroutine context or not. These functions
+ * do not need to be annotated coroutine_fn. Note that this practice is
+ * deprecated and is being phased out, new code should not do this.
+ *
  * For example:
  *
  *   static void coroutine_fn foo(void) {
