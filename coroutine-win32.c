@@ -77,7 +77,7 @@ void qemu_coroutine_delete(Coroutine *co_)
     g_free(co);
 }
 
-Coroutine *qemu_coroutine_self(void)
+Coroutine *qemu_coroutine_self_int(void)
 {
     if (!current) {
         current = &leader.base;

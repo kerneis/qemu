@@ -277,7 +277,7 @@ CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
     return ret;
 }
 
-Coroutine *qemu_coroutine_self(void)
+Coroutine *qemu_coroutine_self_int(void)
 {
     CoroutineThreadState *s = coroutine_get_thread_state();
 
