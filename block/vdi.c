@@ -783,9 +783,9 @@ static BlockDriver bdrv_vdi = {
     .bdrv_co_is_allocated = vdi_co_is_allocated,
     .bdrv_make_empty = vdi_make_empty,
 
-    .bdrv_read = vdi_co_read,
+    .bdrv_co_read = vdi_co_read,
 #if defined(CONFIG_VDI_WRITE)
-    .bdrv_write = vdi_co_write,
+    .bdrv_co_write = vdi_co_write,
 #endif
 
     .bdrv_get_info = vdi_get_info,

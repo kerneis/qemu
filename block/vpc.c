@@ -836,8 +836,8 @@ static BlockDriver bdrv_vpc = {
     .bdrv_reopen_prepare    = vpc_reopen_prepare,
     .bdrv_co_create         = vpc_co_create,
 
-    .bdrv_read              = vpc_co_read,
-    .bdrv_write             = vpc_co_write,
+    .bdrv_co_read           = vpc_co_read,
+    .bdrv_co_write          = vpc_co_write,
 
     .create_options         = vpc_create_options,
     .bdrv_has_zero_init     = vpc_has_zero_init,

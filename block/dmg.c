@@ -378,7 +378,7 @@ static BlockDriver bdrv_dmg = {
     .format_name	= "dmg",
     .instance_size	= sizeof(BDRVDMGState),
     .bdrv_probe		= dmg_probe,
-    .bdrv_read          = dmg_co_read,
+    .bdrv_co_read	= dmg_co_read,
     .bdrv_co_open	= dmg_co_open,
     .bdrv_close		= dmg_close,
 };

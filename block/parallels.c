@@ -164,7 +164,7 @@ static BlockDriver bdrv_parallels = {
     .format_name	= "parallels",
     .instance_size	= sizeof(BDRVParallelsState),
     .bdrv_probe		= parallels_probe,
-    .bdrv_read          = parallels_co_read,
+    .bdrv_co_read	= parallels_co_read,
     .bdrv_co_open	= parallels_co_open,
     .bdrv_close		= parallels_close,
 };
