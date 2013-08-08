@@ -134,7 +134,15 @@ void coroutine_fn qemu_coroutine_yield(void)
     coroutine_swap(self, to);
 }
 
-coroutine_fn Coroutine *qemu_coroutine_self(void)
+Coroutine *coroutine_fn qemu_coroutine_self(void)
 {
+    /* Call the internal version of this function, which is
+     * non-coroutine_fn and can therefore be called from from
+     * non-coroutine contexts.  Internally we know it's always possible
+     * to pull a Coroutine* out of thin air (or thread-local storage).
+     * External callers shouldn't assume they can always get a
+     * Coroutine* since we may not be in coroutine context, hence the
+     * external version of this function.
+     */
     return qemu_coroutine_self_int();
 }
