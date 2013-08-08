@@ -255,7 +255,7 @@ static void cow_close(BlockDriverState *bs)
 {
 }
 
-static int cow_create(const char *filename, QEMUOptionParameter *options)
+static int coroutine_fn cow_co_create(const char *filename, QEMUOptionParameter *options)
 {
     struct cow_header_v2 cow_header;
     struct stat st;
@@ -339,7 +339,7 @@ static BlockDriver bdrv_cow = {
     .bdrv_probe     = cow_probe,
     .bdrv_open      = cow_open,
     .bdrv_close     = cow_close,
-    .bdrv_create    = cow_create,
+    .bdrv_co_create = cow_co_create,
     .bdrv_has_zero_init     = bdrv_has_zero_init_1,
 
     .bdrv_read              = cow_co_read,

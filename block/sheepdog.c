@@ -1454,7 +1454,7 @@ out:
     return ret;
 }
 
-static int sd_create(const char *filename, QEMUOptionParameter *options)
+static int coroutine_fn sd_co_create(const char *filename, QEMUOptionParameter *options)
 {
     int ret = 0;
     uint32_t vid = 0, base_vid = 0;
@@ -2346,7 +2346,7 @@ static BlockDriver bdrv_sheepdog = {
     .instance_size  = sizeof(BDRVSheepdogState),
     .bdrv_file_open = sd_open,
     .bdrv_close     = sd_close,
-    .bdrv_create    = sd_create,
+    .bdrv_co_create    = sd_co_create,
     .bdrv_has_zero_init = bdrv_has_zero_init_1,
     .bdrv_getlength = sd_getlength,
     .bdrv_truncate  = sd_truncate,
@@ -2374,7 +2374,7 @@ static BlockDriver bdrv_sheepdog_tcp = {
     .instance_size  = sizeof(BDRVSheepdogState),
     .bdrv_file_open = sd_open,
     .bdrv_close     = sd_close,
-    .bdrv_create    = sd_create,
+    .bdrv_co_create    = sd_co_create,
     .bdrv_has_zero_init = bdrv_has_zero_init_1,
     .bdrv_getlength = sd_getlength,
     .bdrv_truncate  = sd_truncate,
@@ -2402,7 +2402,7 @@ static BlockDriver bdrv_sheepdog_unix = {
     .instance_size  = sizeof(BDRVSheepdogState),
     .bdrv_file_open = sd_open,
     .bdrv_close     = sd_close,
-    .bdrv_create    = sd_create,
+    .bdrv_co_create    = sd_co_create,
     .bdrv_has_zero_init = bdrv_has_zero_init_1,
     .bdrv_getlength = sd_getlength,
     .bdrv_truncate  = sd_truncate,

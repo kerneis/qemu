@@ -1040,7 +1040,7 @@ static int64_t raw_get_allocated_file_size(BlockDriverState *bs)
     return (int64_t)st.st_blocks * 512;
 }
 
-static int raw_create(const char *filename, QEMUOptionParameter *options)
+static int coroutine_fn raw_co_create(const char *filename, QEMUOptionParameter *options)
 {
     int fd;
     int result = 0;
@@ -1198,7 +1198,7 @@ static BlockDriver bdrv_file = {
     .bdrv_reopen_commit = raw_reopen_commit,
     .bdrv_reopen_abort = raw_reopen_abort,
     .bdrv_close = raw_close,
-    .bdrv_create = raw_create,
+    .bdrv_co_create = raw_co_create,
     .bdrv_has_zero_init = bdrv_has_zero_init_1,
     .bdrv_co_is_allocated = raw_co_is_allocated,
 
@@ -1498,7 +1498,7 @@ static coroutine_fn BlockDriverAIOCB *hdev_aio_discard(BlockDriverState *bs,
                        cb, opaque, QEMU_AIO_DISCARD|QEMU_AIO_BLKDEV);
 }
 
-static int hdev_create(const char *filename, QEMUOptionParameter *options)
+static int coroutine_fn hdev_co_create(const char *filename, QEMUOptionParameter *options)
 {
     int fd;
     int ret = 0;
@@ -1538,7 +1538,7 @@ static BlockDriver bdrv_host_device = {
     .bdrv_reopen_prepare = raw_reopen_prepare,
     .bdrv_reopen_commit  = raw_reopen_commit,
     .bdrv_reopen_abort   = raw_reopen_abort,
-    .bdrv_create        = hdev_create,
+    .bdrv_co_create     = hdev_co_create,
     .create_options     = raw_create_options,
 
     .bdrv_aio_readv	= raw_aio_readv,
@@ -1662,7 +1662,7 @@ static BlockDriver bdrv_host_floppy = {
     .bdrv_reopen_prepare = raw_reopen_prepare,
     .bdrv_reopen_commit  = raw_reopen_commit,
     .bdrv_reopen_abort   = raw_reopen_abort,
-    .bdrv_create        = hdev_create,
+    .bdrv_co_create     = hdev_co_create,
     .create_options     = raw_create_options,
 
     .bdrv_aio_readv     = raw_aio_readv,
@@ -1763,7 +1763,7 @@ static BlockDriver bdrv_host_cdrom = {
     .bdrv_reopen_prepare = raw_reopen_prepare,
     .bdrv_reopen_commit  = raw_reopen_commit,
     .bdrv_reopen_abort   = raw_reopen_abort,
-    .bdrv_create        = hdev_create,
+    .bdrv_co_create     = hdev_co_create,
     .create_options     = raw_create_options,
 
     .bdrv_aio_readv     = raw_aio_readv,
@@ -1884,7 +1884,7 @@ static BlockDriver bdrv_host_cdrom = {
     .bdrv_reopen_prepare = raw_reopen_prepare,
     .bdrv_reopen_commit  = raw_reopen_commit,
     .bdrv_reopen_abort   = raw_reopen_abort,
-    .bdrv_create        = hdev_create,
+    .bdrv_co_create     = hdev_co_create,
     .create_options     = raw_create_options,
 
     .bdrv_aio_readv     = raw_aio_readv,

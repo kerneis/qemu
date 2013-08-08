@@ -651,7 +651,7 @@ static void qcow_close(BlockDriverState *bs)
     error_free(s->migration_blocker);
 }
 
-static int qcow_create(const char *filename, QEMUOptionParameter *options)
+static int coroutine_fn qcow_create(const char *filename, QEMUOptionParameter *options)
 {
     int header_size, backing_filename_len, l1_size, shift, i;
     QCowHeader header;
@@ -891,7 +891,7 @@ static BlockDriver bdrv_qcow = {
     .bdrv_open		= qcow_open,
     .bdrv_close		= qcow_close,
     .bdrv_reopen_prepare = qcow_reopen_prepare,
-    .bdrv_create	= qcow_create,
+    .bdrv_co_create	= qcow_create,
     .bdrv_has_zero_init     = bdrv_has_zero_init_1,
 
     .bdrv_co_readv          = qcow_co_readv,

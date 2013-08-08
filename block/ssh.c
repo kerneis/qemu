@@ -650,7 +650,7 @@ static QEMUOptionParameter ssh_create_options[] = {
     { NULL }
 };
 
-static int ssh_create(const char *filename, QEMUOptionParameter *options)
+static int coroutine_fn ssh_co_create(const char *filename, QEMUOptionParameter *options)
 {
     int r, ret;
     Error *local_err = NULL;
@@ -1050,7 +1050,7 @@ static BlockDriver bdrv_ssh = {
     .instance_size                = sizeof(BDRVSSHState),
     .bdrv_parse_filename          = ssh_parse_filename,
     .bdrv_file_open               = ssh_file_open,
-    .bdrv_create                  = ssh_create,
+    .bdrv_co_create               = ssh_co_create,
     .bdrv_close                   = ssh_close,
     .bdrv_has_zero_init           = ssh_has_zero_init,
     .bdrv_co_readv                = ssh_co_readv,

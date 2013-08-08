@@ -1394,7 +1394,7 @@ out:
     return ret;
 }
 
-static int qcow2_create(const char *filename, QEMUOptionParameter *options)
+static int coroutine_fn qcow2_co_create(const char *filename, QEMUOptionParameter *options)
 {
     const char *backing_file = NULL;
     const char *backing_fmt = NULL;
@@ -1784,7 +1784,7 @@ static BlockDriver bdrv_qcow2 = {
     .bdrv_open          = qcow2_open,
     .bdrv_close         = qcow2_close,
     .bdrv_reopen_prepare  = qcow2_reopen_prepare,
-    .bdrv_create        = qcow2_create,
+    .bdrv_co_create     = qcow2_co_create,
     .bdrv_has_zero_init = bdrv_has_zero_init_1,
     .bdrv_co_is_allocated = qcow2_co_is_allocated,
     .bdrv_set_key       = qcow2_set_key,
