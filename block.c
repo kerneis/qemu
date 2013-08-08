@@ -364,7 +364,7 @@ BlockDriver *bdrv_find_whitelisted_format(const char *format_name,
 
 typedef struct CreateCo {
     BlockDriver *drv;
-    char *filename;
+    const char *filename;
     QEMUOptionParameter *options;
     int ret;
 } CreateCo;
@@ -372,48 +372,49 @@ typedef struct CreateCo {
 static void coroutine_fn bdrv_create_co_entry(void *opaque)
 {
     CreateCo *cco = opaque;
-    assert(cco->drv);
-
-    cco->ret = cco->drv->bdrv_co_create(cco->filename, cco->options);
+    cco->ret = bdrv_create(cco->drv, cco->filename, cco->options);
 }
 
-int bdrv_create(BlockDriver *drv, const char* filename,
+int coroutine_fn bdrv_create(BlockDriver *drv, const char* filename,
     QEMUOptionParameter *options)
 {
     int ret;
+    char *dup_fn;
 
+    assert(drv);
+    if (!drv->bdrv_co_create) {
+        return -ENOTSUP;
+    }
+
+    dup_fn = g_strdup(filename);
+    ret = drv->bdrv_co_create(dup_fn, options);
+    g_free(dup_fn);
+    return ret;
+}
+
+
+int bdrv_sync_create(BlockDriver *drv, const char* filename,
+    QEMUOptionParameter *options)
+{
     Coroutine *co;
     CreateCo cco = {
         .drv = drv,
-        .filename = g_strdup(filename),
+        .filename = filename,
         .options = options,
         .ret = NOT_DONE,
     };
 
-    if (!drv->bdrv_co_create) {
-        ret = -ENOTSUP;
-        goto out;
+    co = qemu_coroutine_create(bdrv_create_co_entry);
+    qemu_coroutine_enter(co, &cco);
+    while (cco.ret == NOT_DONE) {
+        qemu_aio_wait();
     }
 
-    if (qemu_in_coroutine()) {
-        /* Fast-path if already in coroutine context */
-        bdrv_create_co_entry(&cco);
-    } else {
-        co = qemu_coroutine_create(bdrv_create_co_entry);
-        qemu_coroutine_enter(co, &cco);
-        while (cco.ret == NOT_DONE) {
-            qemu_aio_wait();
-        }
-    }
-
-    ret = cco.ret;
-
-out:
-    g_free(cco.filename);
-    return ret;
+    return cco.ret;
 }
 
-int bdrv_create_file(const char* filename, QEMUOptionParameter *options)
+int coroutine_fn bdrv_create_file(const char* filename,
+                                  QEMUOptionParameter *options)
 {
     BlockDriver *drv;
 
@@ -1035,7 +1036,7 @@ int bdrv_open(BlockDriverState *bs, const char *filename, QDict *options,
                 drv->format_name);
         }
 
-        ret = bdrv_create(bdrv_qcow2, tmp_filename, create_options);
+        ret = bdrv_sync_create(bdrv_qcow2, tmp_filename, create_options);
         free_option_parameters(create_options);
         if (ret < 0) {
             goto fail;
@@ -4465,7 +4466,7 @@ bdrv_acct_done(BlockDriverState *bs, BlockAcctCookie *cookie)
     bs->total_time_ns[cookie->type] += get_clock() - cookie->start_time_ns;
 }
 
-void bdrv_img_create(const char *filename, const char *fmt,
+void coroutine_fn bdrv_img_create(const char *filename, const char *fmt,
                      const char *base_filename, const char *base_fmt,
                      char *options, uint64_t img_size, int flags,
                      Error **errp, bool quiet)
