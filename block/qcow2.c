@@ -58,6 +58,10 @@ typedef struct {
 #define  QCOW2_EXT_MAGIC_BACKING_FORMAT 0xE2792ACA
 #define  QCOW2_EXT_MAGIC_FEATURE_TABLE 0x6803f857
 
+
+#define NOT_DONE 0x7fffffff
+
+
 static int qcow2_probe(const uint8_t *buf, int buf_size, const char *filename)
 {
     const QCowHeader *cow_header = (const void *)buf;
@@ -315,7 +319,8 @@ static QemuOptsList qcow2_runtime_opts = {
     },
 };
 
-static int qcow2_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn qcow2_co_open(BlockDriverState *bs, QDict *options,
+                                      int flags)
 {
     BDRVQcowState *s = bs->opaque;
     int len, i, ret = 0;
@@ -588,6 +593,38 @@ static int qcow2_open(BlockDriverState *bs, QDict *options, int flags)
     g_free(s->cluster_cache);
     qemu_vfree(s->cluster_data);
     return ret;
+}
+
+struct QOpenCo {
+    BlockDriverState *bs;
+    QDict *options;
+    int flags;
+    int ret;
+};
+
+static void coroutine_fn qcow2_co_open_entry(void *opaque)
+{
+    struct QOpenCo *qo = opaque;
+
+    qo->ret = qcow2_co_open(qo->bs, qo->options, qo->flags);
+}
+
+static int qcow2_open(BlockDriverState *bs, QDict *options, int flags)
+{
+    Coroutine *co;
+    struct QOpenCo qo = {
+        .bs = bs,
+        .options = options,
+        .flags = flags,
+        .ret = NOT_DONE,
+    };
+
+    co = qemu_coroutine_create(qcow2_co_open_entry);
+    qemu_coroutine_enter(co, &qo);
+    while (qo.ret == NOT_DONE) {
+        qemu_aio_wait();
+    }
+    return qo.ret;
 }
 
 static int qcow2_set_key(BlockDriverState *bs, const char *key)
