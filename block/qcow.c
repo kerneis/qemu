@@ -92,7 +92,7 @@ static int qcow_probe(const uint8_t *buf, int buf_size, const char *filename)
         return 0;
 }
 
-static int qcow_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn qcow_co_open(BlockDriverState *bs, QDict *options, int flags)
 {
     BDRVQcowState *s = bs->opaque;
     int len, i, shift, ret;
@@ -888,7 +888,7 @@ static BlockDriver bdrv_qcow = {
     .format_name	= "qcow",
     .instance_size	= sizeof(BDRVQcowState),
     .bdrv_probe		= qcow_probe,
-    .bdrv_open		= qcow_open,
+    .bdrv_co_open	= qcow_co_open,
     .bdrv_close		= qcow_close,
     .bdrv_reopen_prepare = qcow_reopen_prepare,
     .bdrv_co_create	= qcow_create,

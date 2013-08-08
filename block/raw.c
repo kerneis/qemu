@@ -3,7 +3,7 @@
 #include "block/block_int.h"
 #include "qemu/module.h"
 
-static int raw_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn raw_co_open(BlockDriverState *bs, QDict *options, int flags)
 {
     bs->sg = bs->file->sg;
     return 0;
@@ -132,7 +132,7 @@ static BlockDriver bdrv_raw = {
     /* It's really 0, but we need to make g_malloc() happy */
     .instance_size      = 1,
 
-    .bdrv_open          = raw_open,
+    .bdrv_co_open       = raw_co_open,
     .bdrv_close         = raw_close,
 
     .bdrv_reopen_prepare  = raw_reopen_prepare,

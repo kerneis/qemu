@@ -397,7 +397,7 @@ static QemuOptsList runtime_opts = {
     },
 };
 
-static int curl_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn curl_co_open(BlockDriverState *bs, QDict *options, int flags)
 {
     BDRVCURLState *s = bs->opaque;
     CURLState *state = NULL;
@@ -634,7 +634,7 @@ static BlockDriver bdrv_http = {
 
     .instance_size          = sizeof(BDRVCURLState),
     .bdrv_parse_filename    = curl_parse_filename,
-    .bdrv_file_open         = curl_open,
+    .bdrv_co_file_open      = curl_co_open,
     .bdrv_close             = curl_close,
     .bdrv_getlength         = curl_getlength,
 
@@ -647,7 +647,7 @@ static BlockDriver bdrv_https = {
 
     .instance_size          = sizeof(BDRVCURLState),
     .bdrv_parse_filename    = curl_parse_filename,
-    .bdrv_file_open         = curl_open,
+    .bdrv_co_file_open      = curl_co_open,
     .bdrv_close             = curl_close,
     .bdrv_getlength         = curl_getlength,
 
@@ -660,7 +660,7 @@ static BlockDriver bdrv_ftp = {
 
     .instance_size          = sizeof(BDRVCURLState),
     .bdrv_parse_filename    = curl_parse_filename,
-    .bdrv_file_open         = curl_open,
+    .bdrv_co_file_open      = curl_co_open,
     .bdrv_close             = curl_close,
     .bdrv_getlength         = curl_getlength,
 
@@ -673,7 +673,7 @@ static BlockDriver bdrv_ftps = {
 
     .instance_size          = sizeof(BDRVCURLState),
     .bdrv_parse_filename    = curl_parse_filename,
-    .bdrv_file_open         = curl_open,
+    .bdrv_co_file_open      = curl_co_open,
     .bdrv_close             = curl_close,
     .bdrv_getlength         = curl_getlength,
 
@@ -686,7 +686,7 @@ static BlockDriver bdrv_tftp = {
 
     .instance_size          = sizeof(BDRVCURLState),
     .bdrv_parse_filename    = curl_parse_filename,
-    .bdrv_file_open         = curl_open,
+    .bdrv_co_file_open      = curl_co_open,
     .bdrv_close             = curl_close,
     .bdrv_getlength         = curl_getlength,
 

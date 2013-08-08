@@ -373,7 +373,7 @@ static void bdrv_qed_rebind(BlockDriverState *bs)
     s->bs = bs;
 }
 
-static int bdrv_qed_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn bdrv_qed_co_open(BlockDriverState *bs, QDict *options, int flags)
 {
     BDRVQEDState *s = bs->opaque;
     QEDHeader le_header;
@@ -1570,7 +1570,7 @@ static BlockDriver bdrv_qed = {
 
     .bdrv_probe               = bdrv_qed_probe,
     .bdrv_rebind              = bdrv_qed_rebind,
-    .bdrv_open                = bdrv_qed_open,
+    .bdrv_co_open             = bdrv_qed_co_open,
     .bdrv_close               = bdrv_qed_close,
     .bdrv_reopen_prepare      = bdrv_qed_reopen_prepare,
     .bdrv_co_create           = bdrv_qed_co_create,

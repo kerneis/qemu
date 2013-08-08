@@ -608,7 +608,7 @@ static int connect_to_ssh(BDRVSSHState *s, QDict *options,
     return ret;
 }
 
-static int ssh_file_open(BlockDriverState *bs, QDict *options, int bdrv_flags)
+static int coroutine_fn ssh_co_file_open(BlockDriverState *bs, QDict *options, int bdrv_flags)
 {
     BDRVSSHState *s = bs->opaque;
     int ret;
@@ -1049,7 +1049,7 @@ static BlockDriver bdrv_ssh = {
     .protocol_name                = "ssh",
     .instance_size                = sizeof(BDRVSSHState),
     .bdrv_parse_filename          = ssh_parse_filename,
-    .bdrv_file_open               = ssh_file_open,
+    .bdrv_co_file_open            = ssh_co_file_open,
     .bdrv_co_create               = ssh_co_create,
     .bdrv_close                   = ssh_close,
     .bdrv_has_zero_init           = ssh_has_zero_init,

@@ -108,7 +108,7 @@ static int bochs_probe(const uint8_t *buf, int buf_size, const char *filename)
     return 0;
 }
 
-static int bochs_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn bochs_open(BlockDriverState *bs, QDict *options, int flags)
 {
     BDRVBochsState *s = bs->opaque;
     int i;
@@ -238,8 +238,8 @@ static BlockDriver bdrv_bochs = {
     .format_name	= "bochs",
     .instance_size	= sizeof(BDRVBochsState),
     .bdrv_probe		= bochs_probe,
-    .bdrv_open		= bochs_open,
     .bdrv_read          = bochs_co_read,
+    .bdrv_co_open	= bochs_open,
     .bdrv_close		= bochs_close,
 };
 

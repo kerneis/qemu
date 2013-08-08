@@ -699,7 +699,7 @@ static int bdrv_open_common(BlockDriverState *bs, BlockDriverState *file,
     /* bdrv_open() with directly using a protocol as drv. This layer is already
      * opened, so assign it to bs (while file becomes a closed BlockDriverState)
      * and return immediately. */
-    if (file != NULL && drv->bdrv_file_open) {
+    if (file != NULL && drv->bdrv_co_file_open) {
         bdrv_swap(file, bs);
         return 0;
     }
@@ -730,10 +730,10 @@ static int bdrv_open_common(BlockDriverState *bs, BlockDriverState *file,
     bs->enable_write_cache = !!(flags & BDRV_O_CACHE_WB);
 
     /* Open the image, either directly or using a protocol */
-    if (drv->bdrv_file_open) {
+    if (drv->bdrv_co_file_open) {
         assert(file == NULL);
         assert(drv->bdrv_parse_filename || filename != NULL);
-        ret = drv->bdrv_file_open(bs, options, open_flags);
+        ret = drv->bdrv_co_file_open(bs, options, open_flags);
     } else {
         if (file == NULL) {
             qerror_report(ERROR_CLASS_GENERIC_ERROR, "Can't use '%s' as a "
@@ -744,7 +744,7 @@ static int bdrv_open_common(BlockDriverState *bs, BlockDriverState *file,
         }
         assert(file != NULL);
         bs->file = file;
-        ret = drv->bdrv_open(bs, options, open_flags);
+        ret = drv->bdrv_co_open(bs, options, open_flags);
     }
 
     if (ret < 0) {

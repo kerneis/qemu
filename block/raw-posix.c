@@ -335,7 +335,7 @@ fail:
     return ret;
 }
 
-static int raw_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn raw_co_open(BlockDriverState *bs, QDict *options, int flags)
 {
     BDRVRawState *s = bs->opaque;
 
@@ -1193,7 +1193,7 @@ static BlockDriver bdrv_file = {
     .protocol_name = "file",
     .instance_size = sizeof(BDRVRawState),
     .bdrv_probe = NULL, /* no probe for protocols */
-    .bdrv_file_open = raw_open,
+    .bdrv_co_file_open = raw_co_open,
     .bdrv_reopen_prepare = raw_reopen_prepare,
     .bdrv_reopen_commit = raw_reopen_commit,
     .bdrv_reopen_abort = raw_reopen_abort,
@@ -1325,7 +1325,7 @@ static int check_hdev_writable(BDRVRawState *s)
     return 0;
 }
 
-static int hdev_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn hdev_co_open(BlockDriverState *bs, QDict *options, int flags)
 {
     BDRVRawState *s = bs->opaque;
     int ret;
@@ -1533,7 +1533,7 @@ static BlockDriver bdrv_host_device = {
     .protocol_name        = "host_device",
     .instance_size      = sizeof(BDRVRawState),
     .bdrv_probe_device  = hdev_probe_device,
-    .bdrv_file_open     = hdev_open,
+    .bdrv_co_file_open  = hdev_co_open,
     .bdrv_close         = raw_close,
     .bdrv_reopen_prepare = raw_reopen_prepare,
     .bdrv_reopen_commit  = raw_reopen_commit,
@@ -1559,7 +1559,7 @@ static BlockDriver bdrv_host_device = {
 };
 
 #ifdef __linux__
-static int floppy_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn floppy_co_open(BlockDriverState *bs, QDict *options, int flags)
 {
     BDRVRawState *s = bs->opaque;
     int ret;
@@ -1657,7 +1657,7 @@ static BlockDriver bdrv_host_floppy = {
     .protocol_name      = "host_floppy",
     .instance_size      = sizeof(BDRVRawState),
     .bdrv_probe_device	= floppy_probe_device,
-    .bdrv_file_open     = floppy_open,
+    .bdrv_co_file_open  = floppy_co_open,
     .bdrv_close         = raw_close,
     .bdrv_reopen_prepare = raw_reopen_prepare,
     .bdrv_reopen_commit  = raw_reopen_commit,
@@ -1680,7 +1680,7 @@ static BlockDriver bdrv_host_floppy = {
     .bdrv_eject         = floppy_eject,
 };
 
-static int cdrom_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn cdrom_co_open(BlockDriverState *bs, QDict *options, int flags)
 {
     BDRVRawState *s = bs->opaque;
 
@@ -1758,7 +1758,7 @@ static BlockDriver bdrv_host_cdrom = {
     .protocol_name      = "host_cdrom",
     .instance_size      = sizeof(BDRVRawState),
     .bdrv_probe_device	= cdrom_probe_device,
-    .bdrv_file_open     = cdrom_open,
+    .bdrv_co_file_open  = cdrom_co_open,
     .bdrv_close         = raw_close,
     .bdrv_reopen_prepare = raw_reopen_prepare,
     .bdrv_reopen_commit  = raw_reopen_commit,
@@ -1787,7 +1787,7 @@ static BlockDriver bdrv_host_cdrom = {
 #endif /* __linux__ */
 
 #if defined (__FreeBSD__) || defined(__FreeBSD_kernel__)
-static int cdrom_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn cdrom_co_open(BlockDriverState *bs, QDict *options, int flags)
 {
     BDRVRawState *s = bs->opaque;
     int ret;
@@ -1879,7 +1879,7 @@ static BlockDriver bdrv_host_cdrom = {
     .protocol_name      = "host_cdrom",
     .instance_size      = sizeof(BDRVRawState),
     .bdrv_probe_device	= cdrom_probe_device,
-    .bdrv_file_open     = cdrom_open,
+    .bdrv_co_file_open  = cdrom_co_open,
     .bdrv_close         = raw_close,
     .bdrv_reopen_prepare = raw_reopen_prepare,
     .bdrv_reopen_commit  = raw_reopen_commit,

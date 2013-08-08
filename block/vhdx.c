@@ -715,7 +715,7 @@ exit:
 }
 
 
-static int vhdx_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn vhdx_co_open(BlockDriverState *bs, QDict *options, int flags)
 {
     BDRVVHDXState *s = bs->opaque;
     int ret = 0;
@@ -957,7 +957,7 @@ static BlockDriver bdrv_vhdx = {
     .format_name            = "vhdx",
     .instance_size          = sizeof(BDRVVHDXState),
     .bdrv_probe             = vhdx_probe,
-    .bdrv_open              = vhdx_open,
+    .bdrv_co_open           = vhdx_co_open,
     .bdrv_close             = vhdx_close,
     .bdrv_reopen_prepare    = vhdx_reopen_prepare,
     .bdrv_co_readv          = vhdx_co_readv,

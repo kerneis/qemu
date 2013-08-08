@@ -803,7 +803,7 @@ exit:
     return ret;
 }
 
-static int vmdk_open(BlockDriverState *bs, QDict *options, int flags)
+static int coroutine_fn vmdk_co_open(BlockDriverState *bs, QDict *options, int flags)
 {
     int ret;
     BDRVVmdkState *s = bs->opaque;
@@ -1827,7 +1827,7 @@ static BlockDriver bdrv_vmdk = {
     .format_name                  = "vmdk",
     .instance_size                = sizeof(BDRVVmdkState),
     .bdrv_probe                   = vmdk_probe,
-    .bdrv_open                    = vmdk_open,
+    .bdrv_co_open                 = vmdk_co_open,
     .bdrv_reopen_prepare          = vmdk_reopen_prepare,
     .bdrv_read                    = vmdk_co_read,
     .bdrv_write                   = vmdk_co_write,
