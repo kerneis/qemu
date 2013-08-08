@@ -25,6 +25,8 @@
 #include "block/snapshot.h"
 #include "block/block_int.h"
 
+#define NOT_DONE 0x7fffffff
+
 int bdrv_snapshot_find(BlockDriverState *bs, QEMUSnapshotInfo *sn_info,
                        const char *name)
 {
@@ -81,6 +83,34 @@ int bdrv_snapshot_create(BlockDriverState *bs,
     return -ENOTSUP;
 }
 
+struct SnapOp {
+    BlockDriverState *bs;
+    int ret;
+};
+
+static void coroutine_fn bdrv_snapshot_open_entry(void *opaque)
+{
+    struct SnapOp *so = opaque;
+    so->ret = so->bs->drv->bdrv_co_open(so->bs, NULL, so->bs->open_flags);
+}
+
+static int bdrv_snapshot_open(BlockDriverState *bs)
+{
+    Coroutine *co;
+    struct SnapOp so = {
+        .bs = bs,
+        .ret = NOT_DONE,
+    };
+
+    co = qemu_coroutine_create(bdrv_snapshot_open_entry);
+    qemu_coroutine_enter(co, &so);
+    while (so.ret == NOT_DONE) {
+        qemu_aio_wait();
+    }
+
+    return so.ret;
+}
+
 int bdrv_snapshot_goto(BlockDriverState *bs,
                        const char *snapshot_id)
 {
@@ -97,7 +127,7 @@ int bdrv_snapshot_goto(BlockDriverState *bs,
     if (bs->file) {
         drv->bdrv_close(bs);
         ret = bdrv_snapshot_goto(bs->file, snapshot_id);
-        open_ret = drv->bdrv_open(bs, NULL, bs->open_flags);
+        open_ret = bdrv_snapshot_open(bs);
         if (open_ret < 0) {
             bdrv_delete(bs->file);
             bs->drv = NULL;
