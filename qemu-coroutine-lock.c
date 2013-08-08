@@ -161,7 +161,7 @@ void qemu_co_rwlock_init(CoRwlock *lock)
     qemu_co_queue_init(&lock->queue);
 }
 
-void qemu_co_rwlock_rdlock(CoRwlock *lock)
+void coroutine_fn qemu_co_rwlock_rdlock(CoRwlock *lock)
 {
     while (lock->writer) {
         qemu_co_queue_wait(&lock->queue);
@@ -185,7 +185,7 @@ void qemu_co_rwlock_unlock(CoRwlock *lock)
     }
 }
 
-void qemu_co_rwlock_wrlock(CoRwlock *lock)
+void coroutine_fn qemu_co_rwlock_wrlock(CoRwlock *lock)
 {
     while (lock->writer || lock->reader) {
         qemu_co_queue_wait(&lock->queue);
