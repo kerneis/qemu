@@ -116,9 +116,11 @@ BlockDriver *bdrv_find_protocol(const char *filename,
 BlockDriver *bdrv_find_format(const char *format_name);
 BlockDriver *bdrv_find_whitelisted_format(const char *format_name,
                                           bool readonly);
-int bdrv_create(BlockDriver *drv, const char* filename,
+int coroutine_fn bdrv_create(BlockDriver *drv, const char* filename,
     QEMUOptionParameter *options);
-int bdrv_create_file(const char* filename, QEMUOptionParameter *options);
+int bdrv_sync_create(BlockDriver *drv, const char* filename,
+    QEMUOptionParameter *options);
+int coroutine_fn bdrv_create_file(const char* filename, QEMUOptionParameter *options);
 BlockDriverState *bdrv_new(const char *device_name);
 void bdrv_make_anon(BlockDriverState *bs);
 void bdrv_swap(BlockDriverState *bs_new, BlockDriverState *bs_old);
@@ -336,7 +338,7 @@ int bdrv_save_vmstate(BlockDriverState *bs, const uint8_t *buf,
 int bdrv_load_vmstate(BlockDriverState *bs, uint8_t *buf,
                       int64_t pos, int size);
 
-void bdrv_img_create(const char *filename, const char *fmt,
+void coroutine_fn bdrv_img_create(const char *filename, const char *fmt,
                      const char *base_filename, const char *base_fmt,
                      char *options, uint64_t img_size, int flags,
                      Error **errp, bool quiet);
