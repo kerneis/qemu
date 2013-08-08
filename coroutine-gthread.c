@@ -194,7 +194,7 @@ CoroutineAction qemu_coroutine_switch(Coroutine *from_,
     return from->action;
 }
 
-Coroutine *qemu_coroutine_self(void)
+Coroutine *qemu_coroutine_self_int(void)
 {
     CoroutineGThread *co = get_coroutine_key();
     if (!co) {
