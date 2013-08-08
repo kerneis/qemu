@@ -603,7 +603,8 @@ out:
     return ret;
 }
 
-static int bdrv_qed_create(const char *filename, QEMUOptionParameter *options)
+static int coroutine_fn bdrv_qed_co_create(const char *filename,
+                                           QEMUOptionParameter *options)
 {
     uint64_t image_size = 0;
     uint32_t cluster_size = QED_DEFAULT_CLUSTER_SIZE;
@@ -1573,7 +1574,7 @@ static BlockDriver bdrv_qed = {
     .bdrv_open                = bdrv_qed_open,
     .bdrv_close               = bdrv_qed_close,
     .bdrv_reopen_prepare      = bdrv_qed_reopen_prepare,
-    .bdrv_create              = bdrv_qed_create,
+    .bdrv_co_create           = bdrv_qed_co_create,
     .bdrv_has_zero_init       = bdrv_has_zero_init_1,
     .bdrv_co_is_allocated     = bdrv_qed_co_is_allocated,
     .bdrv_make_empty          = bdrv_qed_make_empty,

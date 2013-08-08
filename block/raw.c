@@ -125,7 +125,8 @@ static BlockDriverAIOCB *raw_aio_ioctl(BlockDriverState *bs,
    return bdrv_aio_ioctl(bs->file, req, buf, cb, opaque);
 }
 
-static int raw_create(const char *filename, QEMUOptionParameter *options)
+static int coroutine_fn raw_co_create(const char *filename,
+                                      QEMUOptionParameter *options)
 {
     return bdrv_create_file(filename, options);
 }
@@ -179,7 +180,7 @@ static BlockDriver bdrv_raw = {
     .bdrv_ioctl         = raw_ioctl,
     .bdrv_aio_ioctl     = raw_aio_ioctl,
 
-    .bdrv_create        = raw_create,
+    .bdrv_co_create     = raw_co_create,
     .create_options     = raw_create_options,
     .bdrv_has_zero_init = raw_has_zero_init,
 };

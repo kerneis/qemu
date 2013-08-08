@@ -1532,7 +1532,8 @@ static int filename_decompose(const char *filename, char *path, char *prefix,
     return VMDK_OK;
 }
 
-static int vmdk_create(const char *filename, QEMUOptionParameter *options)
+static int coroutine_fn vmdk_co_create(const char *filename,
+                                       QEMUOptionParameter *options)
 {
     int fd, idx = 0;
     char desc[BUF_SIZE];
@@ -1833,7 +1834,7 @@ static BlockDriver bdrv_vmdk = {
     .bdrv_write                   = vmdk_co_write,
     .bdrv_co_write_zeroes         = vmdk_co_write_zeroes,
     .bdrv_close                   = vmdk_close,
-    .bdrv_create                  = vmdk_create,
+    .bdrv_co_create               = vmdk_co_create,
     .bdrv_co_flush_to_disk        = vmdk_co_flush,
     .bdrv_co_is_allocated         = vmdk_co_is_allocated,
     .bdrv_get_allocated_file_size = vmdk_get_allocated_file_size,

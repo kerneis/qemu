@@ -683,7 +683,8 @@ static int create_fixed_disk(int fd, uint8_t *buf, int64_t total_size)
     return ret;
 }
 
-static int vpc_create(const char *filename, QEMUOptionParameter *options)
+static int coroutine_fn vpc_co_create(const char *filename,
+                                      QEMUOptionParameter *options)
 {
     uint8_t buf[1024];
     struct vhd_footer *footer = (struct vhd_footer *) buf;
@@ -834,7 +835,7 @@ static BlockDriver bdrv_vpc = {
     .bdrv_open              = vpc_open,
     .bdrv_close             = vpc_close,
     .bdrv_reopen_prepare    = vpc_reopen_prepare,
-    .bdrv_create            = vpc_create,
+    .bdrv_co_create         = vpc_co_create,
 
     .bdrv_read              = vpc_co_read,
     .bdrv_write             = vpc_co_write,
