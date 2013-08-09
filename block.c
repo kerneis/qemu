@@ -4190,7 +4190,7 @@ static void coroutine_fn bdrv_discard_co_entry(void *opaque)
     rwco->ret = bdrv_co_discard(rwco->bs, rwco->sector_num, rwco->nb_sectors);
 }
 
-int coroutine_fn bdrv_co_discard(BlockDriverState *bs, int64_t sector_num,
+int coroutine_fn bdrv_discard(BlockDriverState *bs, int64_t sector_num,
                                  int nb_sectors)
 {
     if (!bs->drv) {
@@ -4231,7 +4231,7 @@ int coroutine_fn bdrv_co_discard(BlockDriverState *bs, int64_t sector_num,
     }
 }
 
-int bdrv_discard(BlockDriverState *bs, int64_t sector_num, int nb_sectors)
+int bdrv_sync_discard(BlockDriverState *bs, int64_t sector_num, int nb_sectors)
 {
     Coroutine *co;
     RwCo rwco = {
@@ -4241,13 +4241,7 @@ int bdrv_discard(BlockDriverState *bs, int64_t sector_num, int nb_sectors)
         .ret = NOT_DONE,
     };
 
-    if (qemu_in_coroutine()) {
-        /* Fast-path if already in coroutine context */
-        bdrv_discard_co_entry(&rwco);
-        return rwco.ret;
-    } else {
-        return bdrv_sync_rwco(bdrv_discard_co_entry, &rwco);
-    }
+    return bdrv_sync_rwco(bdrv_discard_co_entry, &rwco);
 }
 
 /**************************************************************/
