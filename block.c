@@ -4085,7 +4085,7 @@ static void coroutine_fn bdrv_flush_co_entry(void *opaque)
     rwco->ret = bdrv_co_flush(rwco->bs);
 }
 
-int coroutine_fn bdrv_co_flush(BlockDriverState *bs)
+int coroutine_fn bdrv_flush(BlockDriverState *bs)
 {
     int ret;
 
@@ -4173,7 +4173,7 @@ void bdrv_clear_incoming_migration_all(void)
     }
 }
 
-int bdrv_flush(BlockDriverState *bs)
+int bdrv_sync_flush(BlockDriverState *bs)
 {
     Coroutine *co;
     RwCo rwco = {
@@ -4181,13 +4181,7 @@ int bdrv_flush(BlockDriverState *bs)
         .ret = NOT_DONE,
     };
 
-    if (qemu_in_coroutine()) {
-        /* Fast-path if already in coroutine context */
-        bdrv_flush_co_entry(&rwco);
-        return rwco.ret;
-    } else {
-        return bdrv_sync_rwco(bdrv_flush_co_entry, &rwco);
-    }
+    return bdrv_sync_rwco(bdrv_flush_co_entry, &rwco);
 }
 
 static void coroutine_fn bdrv_discard_co_entry(void *opaque)
