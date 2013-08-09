@@ -282,8 +282,9 @@ int bdrv_flush_all(void);
 void bdrv_close_all(void);
 void bdrv_drain_all(void);
 
-int bdrv_discard(BlockDriverState *bs, int64_t sector_num, int nb_sectors);
-int bdrv_co_discard(BlockDriverState *bs, int64_t sector_num, int nb_sectors);
+int coroutine_fn bdrv_discard(BlockDriverState *bs, int64_t sector_num,
+                              int nb_sectors);
+int bdrv_sync_discard(BlockDriverState *bs, int64_t sector_num, int nb_sectors);
 int bdrv_has_zero_init_1(BlockDriverState *bs);
 int bdrv_has_zero_init(BlockDriverState *bs);
 int bdrv_is_allocated(BlockDriverState *bs, int64_t sector_num, int nb_sectors,
