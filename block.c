@@ -2182,39 +2182,15 @@ static int bdrv_sync_rwco(void coroutine_fn (*co_fn)(void *), RwCo *rwco)
     return rwco->ret;
 }
 
-static void coroutine_fn bdrv_rw_co_entry(void *opaque)
-{
-    RwCo *rwco = opaque;
-
-    if (!rwco->is_write) {
-        rwco->ret = bdrv_co_do_readv(rwco->bs, rwco->sector_num,
-                                     rwco->nb_sectors, rwco->qiov,
-                                     rwco->flags);
-    } else {
-        rwco->ret = bdrv_co_do_writev(rwco->bs, rwco->sector_num,
-                                      rwco->nb_sectors, rwco->qiov,
-                                      rwco->flags);
-    }
-}
-
 /*
  * Process a vectored synchronous request using coroutines
  */
-static int bdrv_rwv_co(BlockDriverState *bs, int64_t sector_num,
+static int coroutine_fn bdrv_rwv_co(BlockDriverState *bs, int64_t sector_num,
                        QEMUIOVector *qiov, bool is_write,
                        BdrvRequestFlags flags)
 {
-    Coroutine *co;
-    RwCo rwco = {
-        .bs = bs,
-        .sector_num = sector_num,
-        .nb_sectors = qiov->size >> BDRV_SECTOR_BITS,
-        .qiov = qiov,
-        .is_write = is_write,
-        .ret = NOT_DONE,
-        .flags = flags,
-    };
     assert((qiov->size & (BDRV_SECTOR_SIZE - 1)) == 0);
+    int nb_sectors = qiov->size >> BDRV_SECTOR_BITS;
 
     /**
      * In sync call context, when the vcpu is blocked, this throttling timer
@@ -2227,19 +2203,41 @@ static int bdrv_rwv_co(BlockDriverState *bs, int64_t sector_num,
         bdrv_io_limits_disable(bs);
     }
 
-    if (qemu_in_coroutine()) {
-        /* Fast-path if already in coroutine context */
-        bdrv_rw_co_entry(&rwco);
-        return rwco.ret;
+    if (!is_write) {
+        return bdrv_co_do_readv(bs, sector_num, nb_sectors, qiov, flags);
     } else {
-        return bdrv_sync_rwco(bdrv_rw_co_entry, &rwco);
+        return bdrv_co_do_writev(bs, sector_num, nb_sectors, qiov, flags);
     }
+}
+
+static void coroutine_fn bdrv_rw_co_entry(void *opaque)
+{
+    RwCo *rwco = opaque;
+    rwco->ret = bdrv_rwv_co(rwco->bs, rwco->sector_num, rwco->qiov, rwco->is_write, rwco->flags);
+}
+
+/*
+ * Process a vectored synchronous request synchronously
+ */
+static int bdrv_rwv_sync(BlockDriverState *bs, int64_t sector_num,
+                       QEMUIOVector *qiov, bool is_write, BdrvRequestFlags flags)
+{
+    RwCo rwco = {
+        .bs = bs,
+        .sector_num = sector_num,
+        .qiov = qiov,
+        .is_write = is_write,
+        .ret = NOT_DONE,
+        .flags = flags,
+    };
+
+    return bdrv_sync_rwco(bdrv_rw_co_entry, &rwco);
 }
 
 /*
  * Process a synchronous request using coroutines
  */
-static int bdrv_rw_co(BlockDriverState *bs, int64_t sector_num, uint8_t *buf,
+static int coroutine_fn bdrv_rw_co(BlockDriverState *bs, int64_t sector_num, uint8_t *buf,
                       int nb_sectors, bool is_write, BdrvRequestFlags flags)
 {
     QEMUIOVector qiov;
@@ -2252,15 +2250,37 @@ static int bdrv_rw_co(BlockDriverState *bs, int64_t sector_num, uint8_t *buf,
     return bdrv_rwv_co(bs, sector_num, &qiov, is_write, flags);
 }
 
-/* return < 0 if error. See bdrv_write() for the return codes */
-int bdrv_read(BlockDriverState *bs, int64_t sector_num,
+/*
+ * Process a synchronous request using coroutines
+ */
+static int bdrv_rw_sync(BlockDriverState *bs, int64_t sector_num, uint8_t *buf,
+                      int nb_sectors, bool is_write)
+{
+    QEMUIOVector qiov;
+    struct iovec iov = {
+        .iov_base = (void *)buf,
+        .iov_len = nb_sectors * BDRV_SECTOR_SIZE,
+    };
+
+    qemu_iovec_init_external(&qiov, &iov, 1);
+    return bdrv_rwv_sync(bs, sector_num, &qiov, is_write, 0);
+}
+
+int coroutine_fn bdrv_read(BlockDriverState *bs, int64_t sector_num,
               uint8_t *buf, int nb_sectors)
 {
     return bdrv_rw_co(bs, sector_num, buf, nb_sectors, false, 0);
 }
 
+/* return < 0 if error. See bdrv_write() for the return codes */
+int bdrv_sync_read(BlockDriverState *bs, int64_t sector_num,
+              uint8_t *buf, int nb_sectors)
+{
+    return bdrv_rw_sync(bs, sector_num, buf, nb_sectors, false);
+}
+
 /* Just like bdrv_read(), but with I/O throttling temporarily disabled */
-int bdrv_read_unthrottled(BlockDriverState *bs, int64_t sector_num,
+int coroutine_fn bdrv_read_unthrottled(BlockDriverState *bs, int64_t sector_num,
                           uint8_t *buf, int nb_sectors)
 {
     bool enabled;
@@ -2279,13 +2299,19 @@ int bdrv_read_unthrottled(BlockDriverState *bs, int64_t sector_num,
   -EINVAL      Invalid sector number or nb_sectors
   -EACCES      Trying to write a read-only device
 */
-int bdrv_write(BlockDriverState *bs, int64_t sector_num,
+int bdrv_sync_write(BlockDriverState *bs, int64_t sector_num,
+               const uint8_t *buf, int nb_sectors)
+{
+    return bdrv_rw_sync(bs, sector_num, (uint8_t *)buf, nb_sectors, true);
+}
+
+int coroutine_fn bdrv_write(BlockDriverState *bs, int64_t sector_num,
                const uint8_t *buf, int nb_sectors)
 {
     return bdrv_rw_co(bs, sector_num, (uint8_t *)buf, nb_sectors, true, 0);
 }
 
-int bdrv_writev(BlockDriverState *bs, int64_t sector_num, QEMUIOVector *qiov)
+int coroutine_fn bdrv_writev(BlockDriverState *bs, int64_t sector_num, QEMUIOVector *qiov)
 {
     return bdrv_rwv_co(bs, sector_num, qiov, true, 0);
 }
@@ -2296,7 +2322,7 @@ int bdrv_write_zeroes(BlockDriverState *bs, int64_t sector_num, int nb_sectors)
                       BDRV_REQ_ZERO_WRITE);
 }
 
-int bdrv_pread(BlockDriverState *bs, int64_t offset,
+int coroutine_fn bdrv_pread(BlockDriverState *bs, int64_t offset,
                void *buf, int count1)
 {
     uint8_t tmp_buf[BDRV_SECTOR_SIZE];
@@ -2341,7 +2367,7 @@ int bdrv_pread(BlockDriverState *bs, int64_t offset,
     return count1;
 }
 
-int bdrv_pwritev(BlockDriverState *bs, int64_t offset, QEMUIOVector *qiov)
+int coroutine_fn bdrv_pwritev(BlockDriverState *bs, int64_t offset, QEMUIOVector *qiov)
 {
     uint8_t tmp_buf[BDRV_SECTOR_SIZE];
     int len, nb_sectors, count;
@@ -2398,7 +2424,7 @@ int bdrv_pwritev(BlockDriverState *bs, int64_t offset, QEMUIOVector *qiov)
     return qiov->size;
 }
 
-int bdrv_pwrite(BlockDriverState *bs, int64_t offset,
+int coroutine_fn bdrv_pwrite(BlockDriverState *bs, int64_t offset,
                 const void *buf, int count1)
 {
     QEMUIOVector qiov;
