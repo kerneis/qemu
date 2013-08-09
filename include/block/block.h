@@ -154,20 +154,26 @@ void bdrv_dev_eject_request(BlockDriverState *bs, bool force);
 bool bdrv_dev_has_removable_media(BlockDriverState *bs);
 bool bdrv_dev_is_tray_open(BlockDriverState *bs);
 bool bdrv_dev_is_medium_locked(BlockDriverState *bs);
-int bdrv_read(BlockDriverState *bs, int64_t sector_num,
+int coroutine_fn bdrv_read(BlockDriverState *bs, int64_t sector_num,
               uint8_t *buf, int nb_sectors);
-int bdrv_read_unthrottled(BlockDriverState *bs, int64_t sector_num,
+int bdrv_sync_read(BlockDriverState *bs, int64_t sector_num,
+              uint8_t *buf, int nb_sectors);
+int coroutine_fn bdrv_read_unthrottled(BlockDriverState *bs, int64_t sector_num,
                           uint8_t *buf, int nb_sectors);
-int bdrv_write(BlockDriverState *bs, int64_t sector_num,
+int coroutine_fn bdrv_write(BlockDriverState *bs, int64_t sector_num,
+               const uint8_t *buf, int nb_sectors);
+int bdrv_sync_write(BlockDriverState *bs, int64_t sector_num,
                const uint8_t *buf, int nb_sectors);
 int bdrv_write_zeroes(BlockDriverState *bs, int64_t sector_num,
                int nb_sectors);
-int bdrv_writev(BlockDriverState *bs, int64_t sector_num, QEMUIOVector *qiov);
-int bdrv_pread(BlockDriverState *bs, int64_t offset,
+int coroutine_fn bdrv_writev(BlockDriverState *bs, int64_t sector_num,
+                             QEMUIOVector *qiov);
+int coroutine_fn bdrv_pread(BlockDriverState *bs, int64_t offset,
                void *buf, int count);
-int bdrv_pwrite(BlockDriverState *bs, int64_t offset,
+int coroutine_fn bdrv_pwrite(BlockDriverState *bs, int64_t offset,
                 const void *buf, int count);
-int bdrv_pwritev(BlockDriverState *bs, int64_t offset, QEMUIOVector *qiov);
+int coroutine_fn bdrv_pwritev(BlockDriverState *bs, int64_t offset,
+                              QEMUIOVector *qiov);
 int bdrv_pwrite_sync(BlockDriverState *bs, int64_t offset,
     const void *buf, int count);
 int coroutine_fn bdrv_co_readv(BlockDriverState *bs, int64_t sector_num,
