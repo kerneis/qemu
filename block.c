@@ -2172,6 +2172,17 @@ typedef struct RwCo {
     BdrvRequestFlags flags;
 } RwCo;
 
+static int bdrv_sync_rwco(void coroutine_fn (*co_fn)(void *), RwCo *rwco)
+{
+    Coroutine *co;
+    co = qemu_coroutine_create(co_fn);
+    qemu_coroutine_enter(co, rwco);
+    while (rwco->ret == NOT_DONE) {
+        qemu_aio_wait();
+    }
+    return rwco->ret;
+}
+
 static void coroutine_fn bdrv_rw_co_entry(void *opaque)
 {
     RwCo *rwco = opaque;
@@ -2220,14 +2231,10 @@ static int bdrv_rwv_co(BlockDriverState *bs, int64_t sector_num,
     if (qemu_in_coroutine()) {
         /* Fast-path if already in coroutine context */
         bdrv_rw_co_entry(&rwco);
+        return rwco.ret;
     } else {
-        co = qemu_coroutine_create(bdrv_rw_co_entry);
-        qemu_coroutine_enter(co, &rwco);
-        while (rwco.ret == NOT_DONE) {
-            qemu_aio_wait();
-        }
+        return bdrv_sync_rwco(bdrv_rw_co_entry, &rwco);
     }
-    return rwco.ret;
 }
 
 /*
@@ -4147,15 +4154,10 @@ int bdrv_flush(BlockDriverState *bs)
     if (qemu_in_coroutine()) {
         /* Fast-path if already in coroutine context */
         bdrv_flush_co_entry(&rwco);
+        return rwco.ret;
     } else {
-        co = qemu_coroutine_create(bdrv_flush_co_entry);
-        qemu_coroutine_enter(co, &rwco);
-        while (rwco.ret == NOT_DONE) {
-            qemu_aio_wait();
-        }
+        return bdrv_sync_rwco(bdrv_flush_co_entry, &rwco);
     }
-
-    return rwco.ret;
 }
 
 static void coroutine_fn bdrv_discard_co_entry(void *opaque)
@@ -4219,15 +4221,10 @@ int bdrv_discard(BlockDriverState *bs, int64_t sector_num, int nb_sectors)
     if (qemu_in_coroutine()) {
         /* Fast-path if already in coroutine context */
         bdrv_discard_co_entry(&rwco);
+        return rwco.ret;
     } else {
-        co = qemu_coroutine_create(bdrv_discard_co_entry);
-        qemu_coroutine_enter(co, &rwco);
-        while (rwco.ret == NOT_DONE) {
-            qemu_aio_wait();
-        }
+        return bdrv_sync_rwco(bdrv_discard_co_entry, &rwco);
     }
-
-    return rwco.ret;
 }
 
 /**************************************************************/
