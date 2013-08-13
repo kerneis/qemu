@@ -41,7 +41,7 @@
 
 typedef struct img_cmd_t {
     const char *name;
-    int (*handler)(int argc, char **argv);
+    int coroutine_fn (*handler)(int argc, char **argv);
 } img_cmd_t;
 
 enum {
