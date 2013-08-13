@@ -164,7 +164,7 @@ bool bdrv_io_limits_enabled(BlockDriverState *bs)
          || io_limits->iops[BLOCK_IO_LIMIT_TOTAL];
 }
 
-static void bdrv_io_limits_intercept(BlockDriverState *bs,
+static void coroutine_fn bdrv_io_limits_intercept(BlockDriverState *bs,
                                      bool is_write, int nb_sectors)
 {
     int64_t wait_time = -1;
@@ -524,7 +524,7 @@ BlockDriver *bdrv_find_protocol(const char *filename,
     return NULL;
 }
 
-static int find_image_format(BlockDriverState *bs, const char *filename,
+static int coroutine_fn find_image_format(BlockDriverState *bs, const char *filename,
                              BlockDriver **pdrv)
 {
     int score, score_max;
@@ -678,8 +678,8 @@ static int bdrv_open_flags(BlockDriverState *bs, int flags)
  *
  * Removes all processed options from *options.
  */
-static int bdrv_open_common(BlockDriverState *bs, BlockDriverState *file,
-    QDict *options, int flags, BlockDriver *drv)
+static int coroutine_fn bdrv_open_common(BlockDriverState *bs,
+    BlockDriverState *file, QDict *options, int flags, BlockDriver *drv)
 {
     int ret, open_flags;
     const char *filename;
@@ -780,7 +780,7 @@ free_and_fail:
  * after the call (even on failure), so if the caller intends to reuse the
  * dictionary, it needs to use QINCREF() before calling bdrv_file_open.
  */
-int bdrv_file_open(BlockDriverState **pbs, const char *filename,
+int coroutine_fn bdrv_file_open(BlockDriverState **pbs, const char *filename,
                    QDict *options, int flags)
 {
     BlockDriverState *bs;
@@ -888,7 +888,7 @@ fail:
  * function (even on failure), so if the caller intends to reuse the dictionary,
  * it needs to use QINCREF() before calling bdrv_file_open.
  */
-int bdrv_open_backing_file(BlockDriverState *bs, QDict *options)
+int coroutine_fn bdrv_open_backing_file(BlockDriverState *bs, QDict *options)
 {
     char backing_filename[PATH_MAX];
     int back_flags, ret;
@@ -962,7 +962,7 @@ static void extract_subqdict(QDict *src, QDict **dst, const char *start)
  * after the call (even on failure), so if the caller intends to reuse the
  * dictionary, it needs to use QINCREF() before calling bdrv_open.
  */
-int bdrv_open(BlockDriverState *bs, const char *filename, QDict *options,
+int coroutine_fn bdrv_open(BlockDriverState *bs, const char *filename, QDict *options,
               int flags, BlockDriver *drv)
 {
     int ret;
@@ -1035,7 +1035,7 @@ int bdrv_open(BlockDriverState *bs, const char *filename, QDict *options,
                 drv->format_name);
         }
 
-        ret = bdrv_sync_create(bdrv_qcow2, tmp_filename, create_options);
+        ret = bdrv_create(bdrv_qcow2, tmp_filename, create_options);
         free_option_parameters(create_options);
         if (ret < 0) {
             goto fail;
@@ -1293,7 +1293,7 @@ int bdrv_reopen_prepare(BDRVReopenState *reopen_state, BlockReopenQueue *queue,
     }
 
 
-    ret = bdrv_flush(reopen_state->bs);
+    ret = bdrv_flush_sync(reopen_state->bs);
     if (ret) {
         error_set(errp, ERROR_CLASS_GENERIC_ERROR, "Error (%s) flushing drive",
                   strerror(-ret));
@@ -1768,7 +1768,7 @@ int bdrv_check(BlockDriverState *bs, BdrvCheckResult *res, BdrvCheckMode fix)
 #define COMMIT_BUF_SECTORS 2048
 
 /* commit COW file into the raw image */
-int bdrv_commit(BlockDriverState *bs)
+int coroutine_fn bdrv_commit(BlockDriverState *bs)
 {
     BlockDriver *drv = bs->drv;
     int64_t sector, total_sectors;
@@ -1819,7 +1819,7 @@ int bdrv_commit(BlockDriverState *bs)
 
     if (drv->bdrv_make_empty) {
         ret = drv->bdrv_make_empty(bs);
-        bdrv_flush(bs);
+        bdrv_flush_sync(bs);
     }
 
     /*
@@ -1827,7 +1827,7 @@ int bdrv_commit(BlockDriverState *bs)
      * stable on disk.
      */
     if (bs->backing_hd)
-        bdrv_flush(bs->backing_hd);
+        bdrv_flush_sync(bs->backing_hd);
 
 ro_cleanup:
     g_free(buf);
@@ -1840,7 +1840,7 @@ ro_cleanup:
     return ret;
 }
 
-int bdrv_commit_all(void)
+int coroutine_fn bdrv_commit_all(void)
 {
     BlockDriverState *bs;
 
@@ -2443,7 +2443,7 @@ int coroutine_fn bdrv_pwrite(BlockDriverState *bs, int64_t offset,
  *
  * Returns 0 on success, -errno in error cases.
  */
-int bdrv_pwrite_sync(BlockDriverState *bs, int64_t offset,
+int coroutine_fn bdrv_pwrite_sync(BlockDriverState *bs, int64_t offset,
     const void *buf, int count)
 {
     int ret;
@@ -2455,7 +2455,7 @@ int bdrv_pwrite_sync(BlockDriverState *bs, int64_t offset,
 
     /* No flush needed for cache modes that already do it */
     if (bs->enable_write_cache) {
-        bdrv_flush(bs);
+        bdrv_flush_sync(bs);
     }
 
     return 0;
@@ -3804,7 +3804,7 @@ static void bdrv_aio_bh_cb(void *opaque)
     qemu_aio_release(acb);
 }
 
-static BlockDriverAIOCB *bdrv_aio_rw_vector(BlockDriverState *bs,
+static coroutine_fn BlockDriverAIOCB *bdrv_aio_rw_vector(BlockDriverState *bs,
                                             int64_t sector_num,
                                             QEMUIOVector *qiov,
                                             int nb_sectors,
@@ -3833,14 +3833,14 @@ static BlockDriverAIOCB *bdrv_aio_rw_vector(BlockDriverState *bs,
     return &acb->common;
 }
 
-static BlockDriverAIOCB *bdrv_aio_readv_em(BlockDriverState *bs,
+static coroutine_fn BlockDriverAIOCB *bdrv_aio_readv_em(BlockDriverState *bs,
         int64_t sector_num, QEMUIOVector *qiov, int nb_sectors,
         BlockDriverCompletionFunc *cb, void *opaque)
 {
     return bdrv_aio_rw_vector(bs, sector_num, qiov, nb_sectors, cb, opaque, 0);
 }
 
-static BlockDriverAIOCB *bdrv_aio_writev_em(BlockDriverState *bs,
+static coroutine_fn BlockDriverAIOCB *bdrv_aio_writev_em(BlockDriverState *bs,
         int64_t sector_num, QEMUIOVector *qiov, int nb_sectors,
         BlockDriverCompletionFunc *cb, void *opaque)
 {
