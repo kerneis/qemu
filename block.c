@@ -2367,6 +2367,25 @@ int coroutine_fn bdrv_pread(BlockDriverState *bs, int64_t offset,
     return count1;
 }
 
+void coroutine_fn bdrv_pread_co_enter(void *opaque)
+{
+    RwCo *rwco = opaque;
+
+    rwco->ret = bdrv_pread(rwco->bs, rwco->sector_num, rwco->qiov, rwco->nb_sectors);
+}
+
+int bdrv_sync_pread(BlockDriverState *bs, int64_t offset, void *buf, int count1)
+{
+    RwCo rwco = {
+        .bs = bs,
+        .sector_num = offset,
+        .qiov = buf,
+        .nb_sectors = count1,
+    };
+
+    return bdrv_sync_rwco(bdrv_pread_co_enter, &rwco);
+}
+
 int coroutine_fn bdrv_pwritev(BlockDriverState *bs, int64_t offset, QEMUIOVector *qiov)
 {
     uint8_t tmp_buf[BDRV_SECTOR_SIZE];
@@ -2424,6 +2443,23 @@ int coroutine_fn bdrv_pwritev(BlockDriverState *bs, int64_t offset, QEMUIOVector
     return qiov->size;
 }
 
+static void coroutine_fn bdrv_pwritev_co_entry(void *opaque)
+{
+    RwCo *rwco = opaque;
+    rwco->ret = bdrv_pwritev(rwco->bs, rwco->sector_num, rwco->qiov);
+}
+
+int bdrv_sync_pwritev(BlockDriverState *bs, int64_t offset, QEMUIOVector *qiov)
+{
+    RwCo rwco = {
+        .bs = bs,
+        .sector_num = offset,
+        .qiov = qiov,
+    };
+
+    return bdrv_sync_rwco(bdrv_pwritev_co_entry, &rwco);
+}
+
 int coroutine_fn bdrv_pwrite(BlockDriverState *bs, int64_t offset,
                 const void *buf, int count1)
 {
@@ -2435,6 +2471,19 @@ int coroutine_fn bdrv_pwrite(BlockDriverState *bs, int64_t offset,
 
     qemu_iovec_init_external(&qiov, &iov, 1);
     return bdrv_pwritev(bs, offset, &qiov);
+}
+
+int bdrv_sync_pwrite(BlockDriverState *bs, int64_t offset,
+                const void *buf, int count1)
+{
+    QEMUIOVector qiov;
+    struct iovec iov = {
+        .iov_base   = (void *) buf,
+        .iov_len    = count1,
+    };
+
+    qemu_iovec_init_external(&qiov, &iov, 1);
+    return bdrv_sync_pwritev(bs, offset, &qiov);
 }
 
 /*

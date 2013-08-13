@@ -168,11 +168,14 @@ int bdrv_write_zeroes(BlockDriverState *bs, int64_t sector_num,
 int coroutine_fn bdrv_writev(BlockDriverState *bs, int64_t sector_num, QEMUIOVector *qiov);
 int coroutine_fn bdrv_pread(BlockDriverState *bs, int64_t offset,
                void *buf, int count);
+int bdrv_sync_pread(BlockDriverState *bs, int64_t offset,
+               void *buf, int count);
 int coroutine_fn bdrv_pwrite(BlockDriverState *bs, int64_t offset,
                 const void *buf, int count);
+int bdrv_sync_pwrite(BlockDriverState *bs, int64_t offset,
+                const void *buf, int count);
 int coroutine_fn bdrv_pwritev(BlockDriverState *bs, int64_t offset, QEMUIOVector *qiov);
-int bdrv_pwrite_sync(BlockDriverState *bs, int64_t offset,
-    const void *buf, int count);
+int bdrv_sync_pwritev(BlockDriverState *bs, int64_t offset, QEMUIOVector *qiov);
 int coroutine_fn bdrv_co_readv(BlockDriverState *bs, int64_t sector_num,
     int nb_sectors, QEMUIOVector *qiov);
 int coroutine_fn bdrv_co_copy_on_readv(BlockDriverState *bs,
