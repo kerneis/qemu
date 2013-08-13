@@ -1737,7 +1737,7 @@ static coroutine_fn int vmdk_co_flush(BlockDriverState *bs)
     int ret = 0;
 
     for (i = 0; i < s->num_extents; i++) {
-        err = bdrv_co_flush(s->extents[i].file);
+        err = bdrv_flush(s->extents[i].file);
         if (err < 0) {
             ret = err;
         }

@@ -1100,7 +1100,7 @@ static void nbd_trip(void *opaque)
         TRACE("Request type is READ");
 
         if (request.type & NBD_CMD_FLAG_FUA) {
-            ret = bdrv_co_flush(exp->bs);
+            ret = bdrv_flush(exp->bs);
             if (ret < 0) {
                 LOG("flush failed");
                 reply.error = -ret;
@@ -1140,7 +1140,7 @@ static void nbd_trip(void *opaque)
         }
 
         if (request.type & NBD_CMD_FLAG_FUA) {
-            ret = bdrv_co_flush(exp->bs);
+            ret = bdrv_flush(exp->bs);
             if (ret < 0) {
                 LOG("flush failed");
                 reply.error = -ret;
@@ -1159,7 +1159,7 @@ static void nbd_trip(void *opaque)
     case NBD_CMD_FLUSH:
         TRACE("Request type is FLUSH");
 
-        ret = bdrv_co_flush(exp->bs);
+        ret = bdrv_flush(exp->bs);
         if (ret < 0) {
             LOG("flush failed");
             reply.error = -ret;
@@ -1170,7 +1170,7 @@ static void nbd_trip(void *opaque)
         break;
     case NBD_CMD_TRIM:
         TRACE("Request type is TRIM");
-        ret = bdrv_co_discard(exp->bs, (request.from + exp->dev_offset) / 512,
+        ret = bdrv_discard(exp->bs, (request.from + exp->dev_offset) / 512,
                               request.len / 512);
         if (ret < 0) {
             LOG("discard failed");

@@ -1293,7 +1293,7 @@ int bdrv_reopen_prepare(BDRVReopenState *reopen_state, BlockReopenQueue *queue,
     }
 
 
-    ret = bdrv_flush_sync(reopen_state->bs);
+    ret = bdrv_sync_flush(reopen_state->bs);
     if (ret) {
         error_set(errp, ERROR_CLASS_GENERIC_ERROR, "Error (%s) flushing drive",
                   strerror(-ret));
@@ -1819,7 +1819,7 @@ int coroutine_fn bdrv_commit(BlockDriverState *bs)
 
     if (drv->bdrv_make_empty) {
         ret = drv->bdrv_make_empty(bs);
-        bdrv_flush_sync(bs);
+        bdrv_sync_flush(bs);
     }
 
     /*
@@ -1827,7 +1827,7 @@ int coroutine_fn bdrv_commit(BlockDriverState *bs)
      * stable on disk.
      */
     if (bs->backing_hd)
-        bdrv_flush_sync(bs->backing_hd);
+        bdrv_sync_flush(bs->backing_hd);
 
 ro_cleanup:
     g_free(buf);
@@ -2455,7 +2455,7 @@ int coroutine_fn bdrv_pwrite_sync(BlockDriverState *bs, int64_t offset,
 
     /* No flush needed for cache modes that already do it */
     if (bs->enable_write_cache) {
-        bdrv_flush_sync(bs);
+        bdrv_sync_flush(bs);
     }
 
     return 0;
@@ -2680,7 +2680,7 @@ static int coroutine_fn bdrv_co_do_writev(BlockDriverState *bs,
     }
 
     if (ret == 0 && !bs->enable_write_cache) {
-        ret = bdrv_co_flush(bs);
+        ret = bdrv_flush(bs);
     }
 
     if (bs->dirty_bitmap) {
@@ -3934,7 +3934,7 @@ static void coroutine_fn bdrv_aio_flush_co_entry(void *opaque)
     BlockDriverAIOCBCoroutine *acb = opaque;
     BlockDriverState *bs = acb->common.bs;
 
-    acb->req.error = bdrv_co_flush(bs);
+    acb->req.error = bdrv_flush(bs);
     acb->bh = qemu_bh_new(bdrv_co_em_bh, acb);
     qemu_bh_schedule(acb->bh);
 }
@@ -3961,7 +3961,7 @@ static void coroutine_fn bdrv_aio_discard_co_entry(void *opaque)
     BlockDriverAIOCBCoroutine *acb = opaque;
     BlockDriverState *bs = acb->common.bs;
 
-    acb->req.error = bdrv_co_discard(bs, acb->req.sector, acb->req.nb_sectors);
+    acb->req.error = bdrv_discard(bs, acb->req.sector, acb->req.nb_sectors);
     acb->bh = qemu_bh_new(bdrv_co_em_bh, acb);
     qemu_bh_schedule(acb->bh);
 }
@@ -4075,7 +4075,7 @@ static void coroutine_fn bdrv_flush_co_entry(void *opaque)
 {
     RwCo *rwco = opaque;
 
-    rwco->ret = bdrv_co_flush(rwco->bs);
+    rwco->ret = bdrv_flush(rwco->bs);
 }
 
 int coroutine_fn bdrv_flush(BlockDriverState *bs)
@@ -4138,7 +4138,7 @@ int coroutine_fn bdrv_flush(BlockDriverState *bs)
      * in the case of cache=unsafe, so there are no useless flushes.
      */
 flush_parent:
-    return bdrv_co_flush(bs->file);
+    return bdrv_flush(bs->file);
 }
 
 void bdrv_invalidate_cache(BlockDriverState *bs)
@@ -4181,7 +4181,7 @@ static void coroutine_fn bdrv_discard_co_entry(void *opaque)
 {
     RwCo *rwco = opaque;
 
-    rwco->ret = bdrv_co_discard(rwco->bs, rwco->sector_num, rwco->nb_sectors);
+    rwco->ret = bdrv_discard(rwco->bs, rwco->sector_num, rwco->nb_sectors);
 }
 
 int coroutine_fn bdrv_discard(BlockDriverState *bs, int64_t sector_num,
