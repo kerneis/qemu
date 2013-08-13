@@ -4217,7 +4217,6 @@ void bdrv_clear_incoming_migration_all(void)
 
 int bdrv_sync_flush(BlockDriverState *bs)
 {
-    Coroutine *co;
     RwCo rwco = {
         .bs = bs,
     };
