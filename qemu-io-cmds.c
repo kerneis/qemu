@@ -385,7 +385,7 @@ static int do_read(BlockDriverState *bs, char *buf, int64_t offset, int count,
 {
     int ret;
 
-    ret = bdrv_read(bs, offset >> 9, (uint8_t *)buf, count >> 9);
+    ret = bdrv_sync_read(bs, offset >> 9, (uint8_t *)buf, count >> 9);
     if (ret < 0) {
         return ret;
     }
@@ -398,7 +398,7 @@ static int do_write(BlockDriverState *bs, char *buf, int64_t offset, int count,
 {
     int ret;
 
-    ret = bdrv_write(bs, offset >> 9, (uint8_t *)buf, count >> 9);
+    ret = bdrv_sync_write(bs, offset >> 9, (uint8_t *)buf, count >> 9);
     if (ret < 0) {
         return ret;
     }
@@ -409,7 +409,7 @@ static int do_write(BlockDriverState *bs, char *buf, int64_t offset, int count,
 static int do_pread(BlockDriverState *bs, char *buf, int64_t offset, int count,
                     int *total)
 {
-    *total = bdrv_pread(bs, offset, (uint8_t *)buf, count);
+    *total = bdrv_sync_pread(bs, offset, (uint8_t *)buf, count);
     if (*total < 0) {
         return *total;
     }
@@ -419,7 +419,7 @@ static int do_pread(BlockDriverState *bs, char *buf, int64_t offset, int count,
 static int do_pwrite(BlockDriverState *bs, char *buf, int64_t offset, int count,
                      int *total)
 {
-    *total = bdrv_pwrite(bs, offset, (uint8_t *)buf, count);
+    *total = bdrv_sync_pwrite(bs, offset, (uint8_t *)buf, count);
     if (*total < 0) {
         return *total;
     }
@@ -1608,7 +1608,7 @@ static const cmdinfo_t aio_flush_cmd = {
 
 static int flush_f(BlockDriverState *bs, int argc, char **argv)
 {
-    bdrv_flush(bs);
+    bdrv_sync_flush(bs);
     return 0;
 }
 
@@ -1777,7 +1777,7 @@ static int discard_f(BlockDriverState *bs, int argc, char **argv)
     }
 
     gettimeofday(&t1, NULL);
-    ret = bdrv_discard(bs, offset >> BDRV_SECTOR_BITS,
+    ret = bdrv_sync_discard(bs, offset >> BDRV_SECTOR_BITS,
                        count >> BDRV_SECTOR_BITS);
     gettimeofday(&t2, NULL);
 

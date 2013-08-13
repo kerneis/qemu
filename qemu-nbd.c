@@ -138,7 +138,7 @@ static int find_partition(BlockDriverState *bs, int partition,
     int ext_partnum = 4;
     int ret;
 
-    if ((ret = bdrv_read(bs, 0, data, 1)) < 0) {
+    if ((ret = bdrv_sync_read(bs, 0, data, 1)) < 0) {
         errno = -ret;
         err(EXIT_FAILURE, "error while reading");
     }
@@ -158,7 +158,7 @@ static int find_partition(BlockDriverState *bs, int partition,
             uint8_t data1[512];
             int j;
 
-            if ((ret = bdrv_read(bs, mbr[i].start_sector_abs, data1, 1)) < 0) {
+            if ((ret = bdrv_sync_read(bs, mbr[i].start_sector_abs, data1, 1)) < 0) {
                 errno = -ret;
                 err(EXIT_FAILURE, "error while reading");
             }
