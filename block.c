@@ -2175,6 +2175,7 @@ static int bdrv_sync_rwco(void coroutine_fn (*co_fn)(void *), RwCo *rwco)
 {
     Coroutine *co;
     co = qemu_coroutine_create(co_fn);
+    rwco->ret = NOT_DONE;
     qemu_coroutine_enter(co, rwco);
     while (rwco->ret == NOT_DONE) {
         qemu_aio_wait();
@@ -2227,7 +2228,6 @@ static int bdrv_rwv_sync(BlockDriverState *bs, int64_t sector_num,
         .sector_num = sector_num,
         .qiov = qiov,
         .is_write = is_write,
-        .ret = NOT_DONE,
         .flags = flags,
     };
 
@@ -4171,7 +4171,6 @@ int bdrv_sync_flush(BlockDriverState *bs)
     Coroutine *co;
     RwCo rwco = {
         .bs = bs,
-        .ret = NOT_DONE,
     };
 
     return bdrv_sync_rwco(bdrv_flush_co_entry, &rwco);
@@ -4232,7 +4231,6 @@ int bdrv_sync_discard(BlockDriverState *bs, int64_t sector_num, int nb_sectors)
         .bs = bs,
         .sector_num = sector_num,
         .nb_sectors = nb_sectors,
-        .ret = NOT_DONE,
     };
 
     return bdrv_sync_rwco(bdrv_discard_co_entry, &rwco);
