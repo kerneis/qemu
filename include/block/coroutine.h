@@ -19,6 +19,8 @@
 #include "qemu/queue.h"
 #include "qemu/timer.h"
 
+#include "cpc/cpc_runtime.h"
+
 /**
  * Coroutines are a mechanism for stack switching and can be used for
  * cooperative userspace threading.  These functions provide a simple but
@@ -51,7 +53,7 @@
  *       ....
  *   }
  */
-#define coroutine_fn
+#define coroutine_fn __attribute__((cps))
 
 typedef struct Coroutine Coroutine;
 
