@@ -3234,6 +3234,8 @@ else
       error_exit "only the 'windows' coroutine backend is valid for Windows"
     fi
     ;;
+  cpc)
+    ;;
   *)
     error_exit "unknown coroutine backend $coroutine"
     ;;
