@@ -95,7 +95,7 @@ static int cow_open(BlockDriverState *bs, QDict *options, int flags)
             cow_header.backing_file);
 
     bitmap_size = ((bs->total_sectors + 7) >> 3) + sizeof(cow_header);
-    s->cow_sectors_offset = (bitmap_size + 511) & ~511;
+    s->cow_sectors_offset = ROUND_UP(bitmap_size, 511);
     qemu_co_mutex_init(&s->lock);
     return 0;
  fail:
