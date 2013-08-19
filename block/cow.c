@@ -102,42 +102,44 @@ static int cow_open(BlockDriverState *bs, QDict *options, int flags)
     return ret;
 }
 
-/*
- * XXX(hch): right now these functions are extremely inefficient.
- * We should just read the whole bitmap we'll need in one go instead.
- */
-static inline int cow_set_bit(BlockDriverState *bs, int64_t bitnum)
+#define BITS_PER_BITMAP_SECTOR (BDRV_SECTOR_SIZE * 8)
+
+/* Cannot use bitmap.c on big-endian machines.  */
+static int cow_test_bit(int64_t bitnum, const uint8_t *bitmap)
 {
-    uint64_t offset = sizeof(struct cow_header_v2) + bitnum / 8;
-    uint8_t bitmap;
-    int ret;
-
-    ret = bdrv_pread(bs->file, offset, &bitmap, sizeof(bitmap));
-    if (ret < 0) {
-       return ret;
-    }
-
-    bitmap |= (1 << (bitnum % 8));
-
-    ret = bdrv_pwrite_sync(bs->file, offset, &bitmap, sizeof(bitmap));
-    if (ret < 0) {
-       return ret;
-    }
-    return 0;
+    return (bitmap[bitnum / 8] & (1 << (bitnum & 7))) != 0;
 }
 
-static inline int is_bit_set(BlockDriverState *bs, int64_t bitnum)
+static int cow_find_streak(const uint8_t *bitmap, int value, int start,
+                           int nb_sectors)
 {
-    uint64_t offset = sizeof(struct cow_header_v2) + bitnum / 8;
-    uint8_t bitmap;
-    int ret;
-
-    ret = bdrv_pread(bs->file, offset, &bitmap, sizeof(bitmap));
-    if (ret < 0) {
-       return ret;
+    int streak_value = value ? 0xFF : 0;
+    int last = MIN(start + nb_sectors, BITS_PER_BITMAP_SECTOR);
+    int bitnum = start;
+    while (bitnum < last) {
+        if ((bitnum & 7) == 0 && bitmap[bitnum / 8] == streak_value) {
+            bitnum += 8;
+            continue;
+        }
+        if (cow_test_bit(bitnum, bitmap) == value) {
+            bitnum++;
+            continue;
+        }
+        break;
     }
+    return MIN(bitnum, last) - start;
+}
 
-    return !!(bitmap & (1 << (bitnum % 8)));
+static int cow_is_allocated(const uint8_t *bitmap,
+        int64_t sector_num, int nb_sectors, int *num_same)
+{
+    int changed;
+    int64_t bitnum = sector_num + sizeof(struct cow_header_v2) * 8;
+
+    bitnum &= BITS_PER_BITMAP_SECTOR - 1;
+    changed = cow_test_bit(bitnum, bitmap);
+    *num_same = cow_find_streak(bitmap, changed, bitnum, nb_sectors);
+    return changed;
 }
 
 /* Return true if first block has been changed (ie. current version is
@@ -146,40 +148,119 @@ static inline int is_bit_set(BlockDriverState *bs, int64_t bitnum)
 static int coroutine_fn cow_co_is_allocated(BlockDriverState *bs,
         int64_t sector_num, int nb_sectors, int *num_same)
 {
-    int changed;
+    int ret;
+    int64_t bitnum = sector_num + sizeof(struct cow_header_v2) * 8;
+    uint64_t offset = (bitnum / 8) & -BDRV_SECTOR_SIZE;
+    bool first = false, changed = false;
+    int64_t remaining = nb_sectors;
 
-    if (nb_sectors == 0) {
-	*num_same = nb_sectors;
-	return 0;
-    }
+    *num_same = 0;
+    while (remaining) {
+        int ns;
+        uint8_t bitmap[BDRV_SECTOR_SIZE];
+        bool c;
 
-    changed = is_bit_set(bs, sector_num);
-    if (changed < 0) {
-        return 0; /* XXX: how to return I/O errors? */
-    }
+        ret = bdrv_pread(bs->file, offset, &bitmap, sizeof(bitmap));
+        if (ret < 0) {
+            return ret;
+        }
 
-    for (*num_same = 1; *num_same < nb_sectors; (*num_same)++) {
-	if (is_bit_set(bs, sector_num + *num_same) != changed)
-	    break;
+        c = cow_is_allocated(bitmap, sector_num, nb_sectors, &ns);
+        if (!first) {
+            changed = c;
+            first = true;
+        }
+        *num_same += ns;
+        if (ns != BDRV_SECTOR_SIZE) {
+            break;
+        }
+        offset += BDRV_SECTOR_SIZE;
     }
 
     return changed;
 }
 
+/* Update up to one sectors worth of bitmap, return number of bits processed */
+static int64_t cow_update_bitmap_sector(uint8_t *buf, int64_t sector_num,
+        int nb_sectors, bool *flushed)
+{
+    int init_bits = MIN(nb_sectors,
+            (sector_num % 8) ? (8 - (sector_num % 8)) : 0);
+    int remaining = MIN(nb_sectors - init_bits, BITS_PER_BITMAP_SECTOR);
+    int full_bytes = remaining / 8;
+    int trail = remaining % 8;
+
+    int64_t processed = init_bits + full_bytes * 8 + trail;
+    int len = !!init_bits + full_bytes + !!trail;
+
+    /* Do sector_num -> nearest byte boundary */
+    if (init_bits) {
+        /* This sets the highest init_bits bits in the byte */
+        uint8_t bits = ((1 << init_bits) - 1) << (8 - init_bits);
+        buf[0] |= bits;
+    }
+
+    if (full_bytes) {
+        memset(&buf[!!init_bits], ~0, full_bytes);
+    }
+
+    /* Set the trailing bits in the final byte */
+    if (trail) {
+        /* This sets the lowest trail bits in the byte */
+        uint8_t bits = (1 << trail) - 1;
+        buf[len - 1] |= bits;
+    }
+
+    return processed;
+}
+
+/* Set the bits from sector_num to sector_num + nb_sectors in the bitmap of
+ * bs->file. */
 static int cow_update_bitmap(BlockDriverState *bs, int64_t sector_num,
         int nb_sectors)
 {
-    int error = 0;
-    int i;
+    bool flushed = false;
+    int64_t start = sector_num, remaining = nb_sectors;
+    int64_t bitnum = sector_num + sizeof(struct cow_header_v2) * 8;
+    uint64_t offset = (bitnum / 8);
 
-    for (i = 0; i < nb_sectors; i++) {
-        error = cow_set_bit(bs, sector_num + i);
-        if (error) {
-            break;
+    while (remaining) {
+        int ret;
+        int64_t processed;
+        uint8_t bitmap[BDRV_SECTOR_SIZE];
+
+        ret = bdrv_pread(bs->file, offset, bitmap, sizeof(bitmap));
+        if (ret < 0) {
+            return ret;
         }
+
+        processed = cow_update_bitmap_sector(bitmap, start, remaining,
+                &flushed);
+        if (processed < 0) {
+            return processed;
+        }
+
+        start += processed;
+        remaining -= processed;
+
+        /* We need to flush the data before writing the metadata so that there
+         * is no chance of metadata referring to data that doesn't exist. */
+        if (!flushed) {
+            ret = bdrv_flush(bs->file);
+            if (ret < 0) {
+                return ret;
+            }
+            flushed = true;
+        }
+
+        ret = bdrv_pwrite(bs->file, offset, bitmap, sizeof(bitmap));
+        if (ret < 0) {
+            return ret;
+        }
+        offset += sizeof(bitmap);
     }
 
-    return error;
+    return 0;
 }
 
 static int coroutine_fn cow_read(BlockDriverState *bs, int64_t sector_num,
