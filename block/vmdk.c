@@ -204,7 +204,7 @@ static int vmdk_probe(const uint8_t *buf, int buf_size, const char *filename)
 #define BUF_SIZE 4096
 #define HEADER_SIZE 512                 /* first sector of 512 bytes */
 
-static void vmdk_free_extents(BlockDriverState *bs)
+static void coroutine_fn vmdk_free_extents(BlockDriverState *bs)
 {
     int i;
     BDRVVmdkState *s = bs->opaque;
@@ -233,7 +233,7 @@ static void vmdk_free_last_extent(BlockDriverState *bs)
     s->extents = g_realloc(s->extents, s->num_extents * sizeof(VmdkExtent));
 }
 
-static uint32_t vmdk_read_cid(BlockDriverState *bs, int parent)
+static uint32_t coroutine_fn vmdk_read_cid(BlockDriverState *bs, int parent)
 {
     char desc[DESC_SIZE];
     uint32_t cid = 0xffffffff;
@@ -265,7 +265,7 @@ static uint32_t vmdk_read_cid(BlockDriverState *bs, int parent)
     return cid;
 }
 
-static int vmdk_write_cid(BlockDriverState *bs, uint32_t cid)
+static int coroutine_fn vmdk_write_cid(BlockDriverState *bs, uint32_t cid)
 {
     char desc[DESC_SIZE], tmp_desc[DESC_SIZE];
     char *p_name, *tmp_str;
@@ -299,7 +299,7 @@ static int vmdk_write_cid(BlockDriverState *bs, uint32_t cid)
     return 0;
 }
 
-static int vmdk_is_cid_valid(BlockDriverState *bs)
+static int coroutine_fn vmdk_is_cid_valid(BlockDriverState *bs)
 {
 #ifdef CHECK_CID
     BDRVVmdkState *s = bs->opaque;
@@ -352,7 +352,7 @@ exit:
     return ret;
 }
 
-static int vmdk_parent_open(BlockDriverState *bs)
+static int coroutine_fn vmdk_parent_open(BlockDriverState *bs)
 {
     char *p_name;
     char desc[DESC_SIZE + 1];
@@ -430,7 +430,7 @@ static int vmdk_add_extent(BlockDriverState *bs,
     return 0;
 }
 
-static int vmdk_init_tables(BlockDriverState *bs, VmdkExtent *extent)
+static int coroutine_fn vmdk_init_tables(BlockDriverState *bs, VmdkExtent *extent)
 {
     int ret;
     int l1_size, i;
@@ -473,7 +473,7 @@ static int vmdk_init_tables(BlockDriverState *bs, VmdkExtent *extent)
     return ret;
 }
 
-static int vmdk_open_vmdk3(BlockDriverState *bs,
+static int coroutine_fn vmdk_open_vmdk3(BlockDriverState *bs,
                            BlockDriverState *file,
                            int flags)
 {
@@ -508,7 +508,7 @@ static int vmdk_open_vmdk3(BlockDriverState *bs,
 static int vmdk_open_desc_file(BlockDriverState *bs, int flags,
                                uint64_t desc_offset);
 
-static int vmdk_open_vmdk4(BlockDriverState *bs,
+static int coroutine_fn vmdk_open_vmdk4(BlockDriverState *bs,
                            BlockDriverState *file,
                            int flags)
 {
@@ -661,7 +661,7 @@ static int vmdk_parse_description(const char *desc, const char *opt_name,
 }
 
 /* Open an extent file and append to bs array */
-static int vmdk_open_sparse(BlockDriverState *bs,
+static int coroutine_fn vmdk_open_sparse(BlockDriverState *bs,
                             BlockDriverState *file,
                             int flags)
 {
@@ -685,7 +685,7 @@ static int vmdk_open_sparse(BlockDriverState *bs,
     }
 }
 
-static int vmdk_parse_extents(const char *desc, BlockDriverState *bs,
+static int coroutine_fn vmdk_parse_extents(const char *desc, BlockDriverState *bs,
         const char *desc_file_path)
 {
     int ret;
@@ -763,7 +763,7 @@ next_line:
     return 0;
 }
 
-static int vmdk_open_desc_file(BlockDriverState *bs, int flags,
+static int coroutine_fn vmdk_open_desc_file(BlockDriverState *bs, int flags,
                                uint64_t desc_offset)
 {
     int ret;
@@ -837,7 +837,7 @@ fail:
     return ret;
 }
 
-static int get_whole_cluster(BlockDriverState *bs,
+static int coroutine_fn get_whole_cluster(BlockDriverState *bs,
                 VmdkExtent *extent,
                 uint64_t cluster_offset,
                 uint64_t offset,
@@ -909,7 +909,7 @@ static int vmdk_L2update(VmdkExtent *extent, VmdkMetaData *m_data)
     return VMDK_OK;
 }
 
-static int get_cluster_offset(BlockDriverState *bs,
+static int coroutine_fn get_cluster_offset(BlockDriverState *bs,
                                     VmdkExtent *extent,
                                     VmdkMetaData *m_data,
                                     uint64_t offset,
@@ -1067,7 +1067,7 @@ static int coroutine_fn vmdk_co_is_allocated(BlockDriverState *bs,
     return ret;
 }
 
-static int vmdk_write_extent(VmdkExtent *extent, int64_t cluster_offset,
+static int coroutine_fn vmdk_write_extent(VmdkExtent *extent, int64_t cluster_offset,
                             int64_t offset_in_cluster, const uint8_t *buf,
                             int nb_sectors, int64_t sector_num)
 {
@@ -1108,7 +1108,7 @@ static int vmdk_write_extent(VmdkExtent *extent, int64_t cluster_offset,
     return ret;
 }
 
-static int vmdk_read_extent(VmdkExtent *extent, int64_t cluster_offset,
+static int coroutine_fn vmdk_read_extent(VmdkExtent *extent, int64_t cluster_offset,
                             int64_t offset_in_cluster, uint8_t *buf,
                             int nb_sectors)
 {
@@ -1174,7 +1174,7 @@ static int vmdk_read_extent(VmdkExtent *extent, int64_t cluster_offset,
     return ret;
 }
 
-static int vmdk_read(BlockDriverState *bs, int64_t sector_num,
+static int coroutine_fn vmdk_read(BlockDriverState *bs, int64_t sector_num,
                     uint8_t *buf, int nb_sectors)
 {
     BDRVVmdkState *s = bs->opaque;
@@ -1248,7 +1248,7 @@ static coroutine_fn int vmdk_co_read(BlockDriverState *bs, int64_t sector_num,
  *
  * Returns: error code with 0 for success.
  */
-static int vmdk_write(BlockDriverState *bs, int64_t sector_num,
+static int coroutine_fn vmdk_write(BlockDriverState *bs, int64_t sector_num,
                       const uint8_t *buf, int nb_sectors,
                       bool zeroed, bool zero_dry_run)
 {
@@ -1720,7 +1720,7 @@ exit:
     return ret;
 }
 
-static void vmdk_close(BlockDriverState *bs)
+static void coroutine_fn vmdk_close(BlockDriverState *bs)
 {
     BDRVVmdkState *s = bs->opaque;
 

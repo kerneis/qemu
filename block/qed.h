@@ -252,7 +252,7 @@ void qed_find_cluster(BDRVQEDState *s, QEDRequest *request, uint64_t pos,
 /**
  * Consistency check
  */
-int qed_check(BDRVQEDState *s, BdrvCheckResult *result, bool fix);
+int coroutine_fn qed_check(BDRVQEDState *s, BdrvCheckResult *result, bool fix);
 
 QEDTable *qed_alloc_table(BDRVQEDState *s);
 

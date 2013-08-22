@@ -140,12 +140,12 @@ void coroutine_fn qemu_co_queue_wait_insert_head(CoQueue *queue);
  *
  * Returns true if a coroutine was restarted, false if the queue is empty.
  */
-bool coroutine_fn qemu_co_queue_next(CoQueue *queue);
+bool qemu_co_queue_next(CoQueue *queue);
 
 /**
  * Restarts all coroutines in the CoQueue and leaves the queue empty.
  */
-void coroutine_fn qemu_co_queue_restart_all(CoQueue *queue);
+void qemu_co_queue_restart_all(CoQueue *queue);
 
 /**
  * Enter the next coroutine in the queue

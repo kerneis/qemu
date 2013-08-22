@@ -64,7 +64,8 @@ static int dmg_probe(const uint8_t *buf, int buf_size, const char *filename)
     return 0;
 }
 
-static int read_uint64(BlockDriverState *bs, int64_t offset, uint64_t *result)
+static int coroutine_fn read_uint64(BlockDriverState *bs, int64_t offset,
+                                    uint64_t *result)
 {
     uint64_t buffer;
     int ret;
@@ -78,7 +79,8 @@ static int read_uint64(BlockDriverState *bs, int64_t offset, uint64_t *result)
     return 0;
 }
 
-static int read_uint32(BlockDriverState *bs, int64_t offset, uint32_t *result)
+static int coroutine_fn read_uint32(BlockDriverState *bs, int64_t offset,
+                                    uint32_t *result)
 {
     uint32_t buffer;
     int ret;
@@ -276,7 +278,8 @@ static inline uint32_t search_chunk(BDRVDMGState* s,int sector_num)
     return s->n_chunks; /* error */
 }
 
-static inline int dmg_read_chunk(BlockDriverState *bs, int sector_num)
+static inline int coroutine_fn dmg_read_chunk(BlockDriverState *bs,
+                                              int sector_num)
 {
     BDRVDMGState *s = bs->opaque;
 
@@ -332,7 +335,7 @@ static inline int dmg_read_chunk(BlockDriverState *bs, int sector_num)
     return 0;
 }
 
-static int dmg_read(BlockDriverState *bs, int64_t sector_num,
+static int coroutine_fn dmg_read(BlockDriverState *bs, int64_t sector_num,
                     uint8_t *buf, int nb_sectors)
 {
     BDRVDMGState *s = bs->opaque;
@@ -359,7 +362,7 @@ static coroutine_fn int dmg_co_read(BlockDriverState *bs, int64_t sector_num,
     return ret;
 }
 
-static void dmg_close(BlockDriverState *bs)
+static void coroutine_fn dmg_close(BlockDriverState *bs)
 {
     BDRVDMGState *s = bs->opaque;
 

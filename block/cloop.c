@@ -114,7 +114,8 @@ fail:
     return ret;
 }
 
-static inline int cloop_read_block(BlockDriverState *bs, int block_num)
+static inline int coroutine_fn cloop_read_block(BlockDriverState *bs,
+                                                int block_num)
 {
     BDRVCloopState *s = bs->opaque;
 
@@ -146,7 +147,7 @@ static inline int cloop_read_block(BlockDriverState *bs, int block_num)
     return 0;
 }
 
-static int cloop_read(BlockDriverState *bs, int64_t sector_num,
+static int coroutine_fn cloop_read(BlockDriverState *bs, int64_t sector_num,
                     uint8_t *buf, int nb_sectors)
 {
     BDRVCloopState *s = bs->opaque;
@@ -176,7 +177,7 @@ static coroutine_fn int cloop_co_read(BlockDriverState *bs, int64_t sector_num,
     return ret;
 }
 
-static void cloop_close(BlockDriverState *bs)
+static void coroutine_fn cloop_close(BlockDriverState *bs)
 {
     BDRVCloopState *s = bs->opaque;
     if (s->n_blocks > 0) {

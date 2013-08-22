@@ -125,7 +125,7 @@ static int64_t seek_to_sector(BlockDriverState *bs, int64_t sector_num)
     return (uint64_t)(s->catalog_bitmap[index] + offset) * 512;
 }
 
-static int parallels_read(BlockDriverState *bs, int64_t sector_num,
+static int coroutine_fn parallels_read(BlockDriverState *bs, int64_t sector_num,
                     uint8_t *buf, int nb_sectors)
 {
     while (nb_sectors > 0) {
@@ -154,7 +154,7 @@ static coroutine_fn int parallels_co_read(BlockDriverState *bs, int64_t sector_n
     return ret;
 }
 
-static void parallels_close(BlockDriverState *bs)
+static void coroutine_fn parallels_close(BlockDriverState *bs)
 {
     BDRVParallelsState *s = bs->opaque;
     g_free(s->catalog_bitmap);

@@ -1368,7 +1368,7 @@ static void print_mapping(const mapping_t* mapping)
 }
 #endif
 
-static int vvfat_read(BlockDriverState *bs, int64_t sector_num,
+static int coroutine_fn vvfat_read(BlockDriverState *bs, int64_t sector_num,
                     uint8_t *buf, int nb_sectors)
 {
     BDRVVVFATState *s = bs->opaque;
@@ -1677,7 +1677,7 @@ typedef enum {
  * Further, the files/directories handled by this function are
  * assumed to be *not* deleted (and *only* those).
  */
-static uint32_t get_cluster_count_for_direntry(BDRVVVFATState* s,
+static uint32_t coroutine_fn get_cluster_count_for_direntry(BDRVVVFATState* s,
 	direntry_t* direntry, const char* path)
 {
     /*
@@ -1824,7 +1824,7 @@ static uint32_t get_cluster_count_for_direntry(BDRVVVFATState* s,
  * It returns 0 upon inconsistency or error, and the number of clusters
  * used by the directory, its subdirectories and their files.
  */
-static int check_directory_consistency(BDRVVVFATState *s,
+static int coroutine_fn check_directory_consistency(BDRVVVFATState *s,
 	int cluster_num, const char* path)
 {
     int ret = 0;
@@ -1948,7 +1948,7 @@ DLOG(fprintf(stderr, "check direntry %d:\n", i); print_direntry(direntries + i))
 }
 
 /* returns 1 on success */
-static int is_consistent(BDRVVVFATState* s)
+static int coroutine_fn is_consistent(BDRVVVFATState* s)
 {
     int i, check;
     int used_clusters_count = 0;
@@ -2224,7 +2224,7 @@ static int commit_mappings(BDRVVVFATState* s,
     return 0;
 }
 
-static int commit_direntries(BDRVVVFATState* s,
+static int coroutine_fn commit_direntries(BDRVVVFATState* s,
 	int dir_index, int parent_mapping_index)
 {
     direntry_t* direntry = array_get(&(s->directory), dir_index);
@@ -2304,7 +2304,7 @@ DLOG(fprintf(stderr, "commit_direntries for %s, parent_mapping_index %d\n", mapp
 
 /* commit one file (adjust contents, adjust mapping),
    return first_mapping_index */
-static int commit_one_file(BDRVVVFATState* s,
+static int coroutine_fn commit_one_file(BDRVVVFATState* s,
 	int dir_index, uint32_t offset)
 {
     direntry_t* direntry = array_get(&(s->directory), dir_index);
@@ -2559,7 +2559,7 @@ static int handle_renames_and_mkdirs(BDRVVVFATState* s)
 /*
  * TODO: make sure that the short name is not matching *another* file
  */
-static int handle_commits(BDRVVVFATState* s)
+static int coroutine_fn handle_commits(BDRVVVFATState* s)
 {
     int i, fail = 0;
 
@@ -2705,7 +2705,7 @@ static int handle_deletes(BDRVVVFATState* s)
  * - recurse direntries from root (using bs->bdrv_read)
  * - delete files corresponding to mappings marked as deleted
  */
-static int do_commit(BDRVVVFATState* s)
+static int coroutine_fn do_commit(BDRVVVFATState* s)
 {
     int ret = 0;
 
@@ -2757,7 +2757,7 @@ DLOG(checkpoint());
     return 0;
 }
 
-static int try_commit(BDRVVVFATState* s)
+static int coroutine_fn try_commit(BDRVVVFATState* s)
 {
     vvfat_close_current_file(s);
 DLOG(checkpoint());
@@ -2766,7 +2766,7 @@ DLOG(checkpoint());
     return do_commit(s);
 }
 
-static int vvfat_write(BlockDriverState *bs, int64_t sector_num,
+static int coroutine_fn vvfat_write(BlockDriverState *bs, int64_t sector_num,
                     const uint8_t *buf, int nb_sectors)
 {
     BDRVVVFATState *s = bs->opaque;
@@ -2892,7 +2892,8 @@ static int coroutine_fn write_target_commit(BlockDriverState *bs, int64_t sector
     return try_commit(s);
 }
 
-static void write_target_close(BlockDriverState *bs) {
+static void coroutine_fn write_target_close(BlockDriverState *bs)
+{
     BDRVVVFATState* s = *((BDRVVVFATState**) bs->opaque);
     bdrv_delete(s->qcow);
     g_free(s->qcow_filename);
@@ -2904,7 +2905,7 @@ static BlockDriver vvfat_write_target = {
     .bdrv_close         = write_target_close,
 };
 
-static int enable_write_target(BDRVVVFATState *s)
+static int coroutine_fn enable_write_target(BDRVVVFATState *s)
 {
     BlockDriver *bdrv_qcow;
     QEMUOptionParameter *options;
@@ -2956,7 +2957,7 @@ err:
     return ret;
 }
 
-static void vvfat_close(BlockDriverState *bs)
+static void coroutine_fn vvfat_close(BlockDriverState *bs)
 {
     BDRVVVFATState *s = bs->opaque;
 

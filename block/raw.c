@@ -31,7 +31,7 @@ static int coroutine_fn raw_co_writev(BlockDriverState *bs, int64_t sector_num,
     return bdrv_co_writev(bs->file, sector_num, nb_sectors, qiov);
 }
 
-static void raw_close(BlockDriverState *bs)
+static void coroutine_fn raw_close(BlockDriverState *bs)
 {
 }
 
@@ -54,7 +54,7 @@ static int64_t raw_getlength(BlockDriverState *bs)
     return bdrv_getlength(bs->file);
 }
 
-static int raw_truncate(BlockDriverState *bs, int64_t offset)
+static int coroutine_fn raw_truncate(BlockDriverState *bs, int64_t offset)
 {
     return bdrv_truncate(bs->file, offset);
 }

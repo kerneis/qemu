@@ -102,7 +102,7 @@ struct BlockDriver {
                      uint8_t *buf, int nb_sectors);
     int coroutine_fn (*bdrv_co_write)(BlockDriverState *bs, int64_t sector_num,
                       const uint8_t *buf, int nb_sectors);
-    void (*bdrv_close)(BlockDriverState *bs);
+    void coroutine_fn (*bdrv_close)(BlockDriverState *bs);
     void (*bdrv_rebind)(BlockDriverState *bs);
     int coroutine_fn (*bdrv_co_create)(const char *filename, QEMUOptionParameter *options);
     int (*bdrv_set_key)(BlockDriverState *bs, const char *key);
@@ -156,12 +156,11 @@ struct BlockDriver {
     int coroutine_fn (*bdrv_co_flush_to_os)(BlockDriverState *bs);
 
     const char *protocol_name;
-    int (*bdrv_truncate)(BlockDriverState *bs, int64_t offset);
+    int coroutine_fn (*bdrv_truncate)(BlockDriverState *bs, int64_t offset);
     int64_t (*bdrv_getlength)(BlockDriverState *bs);
     int64_t (*bdrv_get_allocated_file_size)(BlockDriverState *bs);
-    int (*bdrv_write_compressed)(BlockDriverState *bs, int64_t sector_num,
-                                 const uint8_t *buf, int nb_sectors);
-
+    int coroutine_fn (*bdrv_write_compressed)(BlockDriverState *bs,
+                    int64_t sector_num, const uint8_t *buf, int nb_sectors);
     int (*bdrv_snapshot_create)(BlockDriverState *bs,
                                 QEMUSnapshotInfo *sn_info);
     int (*bdrv_snapshot_goto)(BlockDriverState *bs,
@@ -204,7 +203,7 @@ struct BlockDriver {
     int (*bdrv_check)(BlockDriverState* bs, BdrvCheckResult *result,
         BdrvCheckMode fix);
 
-    void (*bdrv_debug_event)(BlockDriverState *bs, BlkDebugEvent event);
+    void coroutine_fn (*bdrv_debug_event)(BlockDriverState *bs, BlkDebugEvent event);
 
     /* TODO Better pass a option string/QDict/QemuOpts to add any rule? */
     int (*bdrv_debug_breakpoint)(BlockDriverState *bs, const char *event,

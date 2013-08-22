@@ -32,7 +32,7 @@ static char **cmdline;
 
 static int close_f(BlockDriverState *bs, int argc, char **argv)
 {
-    bdrv_delete(bs);
+    bdrv_sync_delete(bs);
     qemuio_bs = NULL;
     return 0;
 }
@@ -52,7 +52,7 @@ static int openfile(char *name, int flags, int growable)
     }
 
     if (growable) {
-        if (bdrv_file_open(&qemuio_bs, name, NULL, flags)) {
+        if (bdrv_sync_file_open(&qemuio_bs, name, NULL, flags)) {
             fprintf(stderr, "%s: can't open device %s\n", progname, name);
             return 1;
         }
@@ -61,7 +61,7 @@ static int openfile(char *name, int flags, int growable)
 
         if (bdrv_open(qemuio_bs, name, NULL, flags, NULL) < 0) {
             fprintf(stderr, "%s: can't open device %s\n", progname, name);
-            bdrv_delete(qemuio_bs);
+            bdrv_sync_delete(qemuio_bs);
             qemuio_bs = NULL;
             return 1;
         }
@@ -422,7 +422,7 @@ int main(int argc, char **argv)
     bdrv_drain_all();
 
     if (qemuio_bs) {
-        bdrv_delete(qemuio_bs);
+        bdrv_sync_delete(qemuio_bs);
     }
     return 0;
 }

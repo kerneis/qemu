@@ -255,7 +255,7 @@ static int print_block_option_help(const char *filename, const char *fmt)
     return 0;
 }
 
-static BlockDriverState *bdrv_new_open(const char *filename,
+static coroutine_fn BlockDriverState *bdrv_new_open(const char *filename,
                                        const char *fmt,
                                        int flags,
                                        bool require_io,
@@ -1640,7 +1640,7 @@ static gboolean str_equal_func(gconstpointer a, gconstpointer b)
  * image file.  If there was an error a message will have been printed to
  * stderr.
  */
-static ImageInfoList *collect_image_info_list(const char *filename,
+static coroutine_fn ImageInfoList *collect_image_info_list(const char *filename,
                                               const char *fmt,
                                               bool chain)
 {

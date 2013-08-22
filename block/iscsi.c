@@ -1206,7 +1206,7 @@ out:
     return ret;
 }
 
-static void iscsi_close(BlockDriverState *bs)
+static void coroutine_fn iscsi_close(BlockDriverState *bs)
 {
     IscsiLun *iscsilun = bs->opaque;
     struct iscsi_context *iscsi = iscsilun->iscsi;

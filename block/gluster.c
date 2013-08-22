@@ -605,7 +605,7 @@ static int64_t qemu_gluster_allocated_file_size(BlockDriverState *bs)
     }
 }
 
-static void qemu_gluster_close(BlockDriverState *bs)
+static void coroutine_fn qemu_gluster_close(BlockDriverState *bs)
 {
     BDRVGlusterState *s = bs->opaque;
 

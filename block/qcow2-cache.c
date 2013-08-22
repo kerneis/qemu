@@ -74,7 +74,8 @@ int qcow2_cache_destroy(BlockDriverState* bs, Qcow2Cache *c)
     return 0;
 }
 
-static int qcow2_cache_flush_dependency(BlockDriverState *bs, Qcow2Cache *c)
+static int coroutine_fn qcow2_cache_flush_dependency(BlockDriverState *bs,
+                                                     Qcow2Cache *c)
 {
     int ret;
 
@@ -89,7 +90,8 @@ static int qcow2_cache_flush_dependency(BlockDriverState *bs, Qcow2Cache *c)
     return 0;
 }
 
-static int qcow2_cache_entry_flush(BlockDriverState *bs, Qcow2Cache *c, int i)
+static int coroutine_fn qcow2_cache_entry_flush(BlockDriverState *bs,
+                                                Qcow2Cache *c, int i)
 {
     BDRVQcowState *s = bs->opaque;
     int ret = 0;
@@ -131,7 +133,7 @@ static int qcow2_cache_entry_flush(BlockDriverState *bs, Qcow2Cache *c, int i)
     return 0;
 }
 
-int qcow2_cache_flush(BlockDriverState *bs, Qcow2Cache *c)
+int coroutine_fn qcow2_cache_flush(BlockDriverState *bs, Qcow2Cache *c)
 {
     BDRVQcowState *s = bs->opaque;
     int result = 0;
@@ -157,7 +159,7 @@ int qcow2_cache_flush(BlockDriverState *bs, Qcow2Cache *c)
     return result;
 }
 
-int qcow2_cache_set_dependency(BlockDriverState *bs, Qcow2Cache *c,
+int coroutine_fn qcow2_cache_set_dependency(BlockDriverState *bs, Qcow2Cache *c,
     Qcow2Cache *dependency)
 {
     int ret;
@@ -215,7 +217,7 @@ static int qcow2_cache_find_entry_to_replace(Qcow2Cache *c)
     return min_index;
 }
 
-static int qcow2_cache_do_get(BlockDriverState *bs, Qcow2Cache *c,
+static int coroutine_fn qcow2_cache_do_get(BlockDriverState *bs, Qcow2Cache *c,
     uint64_t offset, void **table, bool read_from_disk)
 {
     BDRVQcowState *s = bs->opaque;
@@ -276,14 +278,14 @@ found:
     return 0;
 }
 
-int qcow2_cache_get(BlockDriverState *bs, Qcow2Cache *c, uint64_t offset,
-    void **table)
+int coroutine_fn qcow2_cache_get(BlockDriverState *bs, Qcow2Cache *c,
+                                 uint64_t offset, void **table)
 {
     return qcow2_cache_do_get(bs, c, offset, table, true);
 }
 
-int qcow2_cache_get_empty(BlockDriverState *bs, Qcow2Cache *c, uint64_t offset,
-    void **table)
+int coroutine_fn qcow2_cache_get_empty(BlockDriverState *bs, Qcow2Cache *c,
+                                       uint64_t offset, void **table)
 {
     return qcow2_cache_do_get(bs, c, offset, table, false);
 }

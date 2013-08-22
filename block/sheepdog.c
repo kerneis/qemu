@@ -1546,7 +1546,7 @@ out:
     return ret;
 }
 
-static void sd_close(BlockDriverState *bs)
+static void coroutine_fn sd_close(BlockDriverState *bs)
 {
     BDRVSheepdogState *s = bs->opaque;
     SheepdogVdiReq hdr;

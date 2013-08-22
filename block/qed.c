@@ -89,7 +89,7 @@ static void qed_header_cpu_to_le(const QEDHeader *cpu, QEDHeader *le)
     le->backing_filename_size = cpu_to_le32(cpu->backing_filename_size);
 }
 
-int qed_write_header_sync(BDRVQEDState *s)
+int coroutine_fn qed_write_header_sync(BDRVQEDState *s)
 {
     QEDHeader le;
     int ret;
@@ -228,7 +228,7 @@ static bool qed_is_image_size_valid(uint64_t image_size, uint32_t cluster_size,
  *
  * The string is NUL-terminated.
  */
-static int qed_read_string(BlockDriverState *file, uint64_t offset, size_t n,
+static int coroutine_fn qed_read_string(BlockDriverState *file, uint64_t offset, size_t n,
                            char *buf, size_t buflen)
 {
     int ret;
@@ -513,7 +513,7 @@ static int bdrv_qed_reopen_prepare(BDRVReopenState *state,
     return 0;
 }
 
-static void bdrv_qed_close(BlockDriverState *bs)
+static void coroutine_fn bdrv_qed_close(BlockDriverState *bs)
 {
     BDRVQEDState *s = bs->opaque;
 
@@ -533,7 +533,7 @@ static void bdrv_qed_close(BlockDriverState *bs)
     qemu_vfree(s->l1_table);
 }
 
-static int qed_create(const char *filename, uint32_t cluster_size,
+static int coroutine_fn qed_create(const char *filename, uint32_t cluster_size,
                       uint64_t image_size, uint32_t table_size,
                       const char *backing_file, const char *backing_fmt)
 {
@@ -1407,7 +1407,7 @@ static int coroutine_fn bdrv_qed_co_write_zeroes(BlockDriverState *bs,
     return cb.ret;
 }
 
-static int bdrv_qed_truncate(BlockDriverState *bs, int64_t offset)
+static int coroutine_fn bdrv_qed_truncate(BlockDriverState *bs, int64_t offset)
 {
     BDRVQEDState *s = bs->opaque;
     uint64_t old_image_size;
@@ -1520,7 +1520,7 @@ static int bdrv_qed_change_backing_file(BlockDriverState *bs,
     return ret;
 }
 
-static void bdrv_qed_invalidate_cache(BlockDriverState *bs)
+static void coroutine_fn bdrv_qed_invalidate_cache(BlockDriverState *bs)
 {
     BDRVQEDState *s = bs->opaque;
 

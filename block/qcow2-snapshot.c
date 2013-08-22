@@ -65,7 +65,7 @@ void qcow2_free_snapshots(BlockDriverState *bs)
     s->nb_snapshots = 0;
 }
 
-int qcow2_read_snapshots(BlockDriverState *bs)
+int coroutine_fn qcow2_read_snapshots(BlockDriverState *bs)
 {
     BDRVQcowState *s = bs->opaque;
     QCowSnapshotHeader h;
@@ -152,7 +152,7 @@ fail:
 }
 
 /* add at the end of the file a new list of snapshots */
-static int qcow2_write_snapshots(BlockDriverState *bs)
+static int coroutine_fn qcow2_write_snapshots(BlockDriverState *bs)
 {
     BDRVQcowState *s = bs->opaque;
     QCowSnapshot *sn;
@@ -316,7 +316,8 @@ static int find_snapshot_by_id_or_name(BlockDriverState *bs, const char *name)
 }
 
 /* if no id is provided, a new one is constructed */
-int qcow2_snapshot_create(BlockDriverState *bs, QEMUSnapshotInfo *sn_info)
+int coroutine_fn qcow2_snapshot_create(BlockDriverState *bs,
+                                       QEMUSnapshotInfo *sn_info)
 {
     BDRVQcowState *s = bs->opaque;
     QCowSnapshot *new_snapshot_list = NULL;
@@ -418,7 +419,8 @@ fail:
 }
 
 /* copy the snapshot 'snapshot_name' into the current disk image */
-int qcow2_snapshot_goto(BlockDriverState *bs, const char *snapshot_id)
+int coroutine_fn qcow2_snapshot_goto(BlockDriverState *bs,
+                                     const char *snapshot_id)
 {
     BDRVQcowState *s = bs->opaque;
     QCowSnapshot *sn;
@@ -531,7 +533,8 @@ fail:
     return ret;
 }
 
-int qcow2_snapshot_delete(BlockDriverState *bs, const char *snapshot_id)
+int coroutine_fn qcow2_snapshot_delete(BlockDriverState *bs,
+                                       const char *snapshot_id)
 {
     BDRVQcowState *s = bs->opaque;
     QCowSnapshot sn;
@@ -617,7 +620,8 @@ int qcow2_snapshot_list(BlockDriverState *bs, QEMUSnapshotInfo **psn_tab)
     return s->nb_snapshots;
 }
 
-int qcow2_snapshot_load_tmp(BlockDriverState *bs, const char *snapshot_name)
+int coroutine_fn qcow2_snapshot_load_tmp(BlockDriverState *bs,
+                                         const char *snapshot_name)
 {
     int i, snapshot_index;
     BDRVQcowState *s = bs->opaque;

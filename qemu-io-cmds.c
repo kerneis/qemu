@@ -1630,7 +1630,7 @@ static int truncate_f(BlockDriverState *bs, int argc, char **argv)
         return 0;
     }
 
-    ret = bdrv_truncate(bs, offset);
+    ret = bdrv_sync_truncate(bs, offset);
     if (ret < 0) {
         printf("truncate: %s\n", strerror(-ret));
         return 0;

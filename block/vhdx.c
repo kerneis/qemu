@@ -251,7 +251,7 @@ static void vhdx_header_le_import(VHDXHeader *h)
 
 
 /* opens the specified header block from the VHDX file header section */
-static int vhdx_parse_header(BlockDriverState *bs, BDRVVHDXState *s)
+static int coroutine_fn vhdx_parse_header(BlockDriverState *bs, BDRVVHDXState *s)
 {
     int ret = 0;
     VHDXHeader *header1;
@@ -342,7 +342,7 @@ exit:
 }
 
 
-static int vhdx_open_region_tables(BlockDriverState *bs, BDRVVHDXState *s)
+static int coroutine_fn vhdx_open_region_tables(BlockDriverState *bs, BDRVVHDXState *s)
 {
     int ret = 0;
     uint8_t *buffer;
@@ -444,7 +444,7 @@ fail:
  * Also, if the File Parameters indicate this is a differencing file,
  * we must also look for the Parent Locator metadata item.
  */
-static int vhdx_parse_metadata(BlockDriverState *bs, BDRVVHDXState *s)
+static int coroutine_fn vhdx_parse_metadata(BlockDriverState *bs, BDRVVHDXState *s)
 {
     int ret = 0;
     uint8_t *buffer;
@@ -944,7 +944,7 @@ static coroutine_fn int vhdx_co_writev(BlockDriverState *bs, int64_t sector_num,
 }
 
 
-static void vhdx_close(BlockDriverState *bs)
+static void coroutine_fn vhdx_close(BlockDriverState *bs)
 {
     BDRVVHDXState *s = bs->opaque;
     qemu_vfree(s->headers[0]);

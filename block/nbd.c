@@ -632,7 +632,7 @@ static int coroutine_fn nbd_co_discard(BlockDriverState *bs, int64_t sector_num,
     return -reply.error;
 }
 
-static void nbd_close(BlockDriverState *bs)
+static void coroutine_fn nbd_close(BlockDriverState *bs)
 {
     BDRVNBDState *s = bs->opaque;
     g_free(s->export_name);

@@ -599,7 +599,7 @@ static BlockDriverAIOCB *curl_aio_readv(BlockDriverState *bs,
     return &acb->common;
 }
 
-static void curl_close(BlockDriverState *bs)
+static void coroutine_fn curl_close(BlockDriverState *bs)
 {
     BDRVCURLState *s = bs->opaque;
     int i;

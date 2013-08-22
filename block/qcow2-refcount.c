@@ -27,15 +27,16 @@
 #include "block/qcow2.h"
 
 static int64_t alloc_clusters_noref(BlockDriverState *bs, int64_t size);
-static int QEMU_WARN_UNUSED_RESULT update_refcount(BlockDriverState *bs,
-                            int64_t offset, int64_t length,
-                            int addend, enum qcow2_discard_type type);
+static int QEMU_WARN_UNUSED_RESULT coroutine_fn update_refcount(
+                            BlockDriverState *bs, int64_t offset,
+                            int64_t length, int addend,
+                            enum qcow2_discard_type type);
 
 
 /*********************************************************/
 /* refcount handling */
 
-int qcow2_refcount_init(BlockDriverState *bs)
+int coroutine_fn qcow2_refcount_init(BlockDriverState *bs)
 {
     BDRVQcowState *s = bs->opaque;
     int ret, refcount_table_size2, i;
@@ -152,7 +153,7 @@ static int in_same_refcount_block(BDRVQcowState *s, uint64_t offset_a,
  *
  * Returns 0 on success or -errno in error case
  */
-static int alloc_refcount_block(BlockDriverState *bs,
+static int coroutine_fn alloc_refcount_block(BlockDriverState *bs,
     int64_t cluster_index, uint16_t **refcount_block)
 {
     BDRVQcowState *s = bs->opaque;
@@ -420,7 +421,7 @@ fail_block:
     return ret;
 }
 
-void qcow2_process_discards(BlockDriverState *bs, int ret)
+void coroutine_fn qcow2_process_discards(BlockDriverState *bs, int ret)
 {
     BDRVQcowState *s = bs->opaque;
     Qcow2DiscardRegion *d, *next;
@@ -489,8 +490,9 @@ found:
 }
 
 /* XXX: cache several refcount block clusters ? */
-static int QEMU_WARN_UNUSED_RESULT update_refcount(BlockDriverState *bs,
-    int64_t offset, int64_t length, int addend, enum qcow2_discard_type type)
+static int QEMU_WARN_UNUSED_RESULT coroutine_fn update_refcount(
+    BlockDriverState *bs, int64_t offset, int64_t length, int addend,
+    enum qcow2_discard_type type)
 {
     BDRVQcowState *s = bs->opaque;
     int64_t start, last, cluster_offset;
@@ -599,7 +601,7 @@ fail:
  * If the return value is non-negative, it is the new refcount of the cluster.
  * If it is negative, it is -errno and indicates an error.
  */
-static int update_cluster_refcount(BlockDriverState *bs,
+static int coroutine_fn update_cluster_refcount(BlockDriverState *bs,
                                    int64_t cluster_index,
                                    int addend,
                                    enum qcow2_discard_type type)
@@ -649,7 +651,7 @@ retry:
     return (s->free_cluster_index - nb_clusters) << s->cluster_bits;
 }
 
-int64_t qcow2_alloc_clusters(BlockDriverState *bs, int64_t size)
+int64_t coroutine_fn qcow2_alloc_clusters(BlockDriverState *bs, int64_t size)
 {
     int64_t offset;
     int ret;
@@ -668,7 +670,7 @@ int64_t qcow2_alloc_clusters(BlockDriverState *bs, int64_t size)
     return offset;
 }
 
-int qcow2_alloc_clusters_at(BlockDriverState *bs, uint64_t offset,
+int coroutine_fn qcow2_alloc_clusters_at(BlockDriverState *bs, uint64_t offset,
     int nb_clusters)
 {
     BDRVQcowState *s = bs->opaque;
@@ -705,7 +707,7 @@ int qcow2_alloc_clusters_at(BlockDriverState *bs, uint64_t offset,
 
 /* only used to allocate compressed sectors. We try to allocate
    contiguous sectors. size must be <= cluster_size */
-int64_t qcow2_alloc_bytes(BlockDriverState *bs, int size)
+int64_t coroutine_fn qcow2_alloc_bytes(BlockDriverState *bs, int size)
 {
     BDRVQcowState *s = bs->opaque;
     int64_t offset, cluster_offset;
@@ -759,7 +761,7 @@ int64_t qcow2_alloc_bytes(BlockDriverState *bs, int size)
     return offset;
 }
 
-void qcow2_free_clusters(BlockDriverState *bs,
+void coroutine_fn qcow2_free_clusters(BlockDriverState *bs,
                           int64_t offset, int64_t size,
                           enum qcow2_discard_type type)
 {
@@ -777,8 +779,10 @@ void qcow2_free_clusters(BlockDriverState *bs,
  * Free a cluster using its L2 entry (handles clusters of all types, e.g.
  * normal cluster, compressed cluster, etc.)
  */
-void qcow2_free_any_clusters(BlockDriverState *bs, uint64_t l2_entry,
-                             int nb_clusters, enum qcow2_discard_type type)
+void coroutine_fn qcow2_free_any_clusters(BlockDriverState *bs,
+                                          uint64_t l2_entry,
+                                          int nb_clusters,
+                                          enum qcow2_discard_type type)
 {
     BDRVQcowState *s = bs->opaque;
 
@@ -813,7 +817,7 @@ void qcow2_free_any_clusters(BlockDriverState *bs, uint64_t l2_entry,
 
 
 /* update the refcounts of snapshots and the copied flag */
-int qcow2_update_snapshot_refcount(BlockDriverState *bs,
+int coroutine_fn qcow2_update_snapshot_refcount(BlockDriverState *bs,
     int64_t l1_table_offset, int l1_size, int addend)
 {
     BDRVQcowState *s = bs->opaque;
@@ -1026,9 +1030,9 @@ enum {
  * Returns the number of errors found by the checks or -errno if an internal
  * error occurred.
  */
-static int check_refcounts_l2(BlockDriverState *bs, BdrvCheckResult *res,
-    uint16_t *refcount_table, int refcount_table_size, int64_t l2_offset,
-    int flags)
+static int coroutine_fn check_refcounts_l2(BlockDriverState *bs,
+    BdrvCheckResult *res, uint16_t *refcount_table, int refcount_table_size,
+    int64_t l2_offset, int flags)
 {
     BDRVQcowState *s = bs->opaque;
     uint64_t *l2_table, l2_entry;
@@ -1149,7 +1153,7 @@ fail:
  * Returns the number of errors found by the checks or -errno if an internal
  * error occurred.
  */
-static int check_refcounts_l1(BlockDriverState *bs,
+static int coroutine_fn check_refcounts_l1(BlockDriverState *bs,
                               BdrvCheckResult *res,
                               uint16_t *refcount_table,
                               int refcount_table_size,
@@ -1234,8 +1238,8 @@ fail:
  * Returns 0 if no errors are found, the number of errors in case the image is
  * detected as corrupted, and -errno when an internal error occurred.
  */
-int qcow2_check_refcounts(BlockDriverState *bs, BdrvCheckResult *res,
-                          BdrvCheckMode fix)
+int coroutine_fn qcow2_check_refcounts(BlockDriverState *bs,
+                                       BdrvCheckResult *res, BdrvCheckMode fix)
 {
     BDRVQcowState *s = bs->opaque;
     int64_t size, i, highest_cluster;

@@ -856,7 +856,7 @@ static BlockDriverAIOCB *raw_aio_flush(BlockDriverState *bs,
     return paio_submit(bs, s->fd, 0, NULL, 0, cb, opaque, QEMU_AIO_FLUSH);
 }
 
-static void raw_close(BlockDriverState *bs)
+static void coroutine_fn raw_close(BlockDriverState *bs)
 {
     BDRVRawState *s = bs->opaque;
     if (s->fd >= 0) {

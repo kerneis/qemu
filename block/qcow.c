@@ -78,7 +78,8 @@ typedef struct BDRVQcowState {
     Error *migration_blocker;
 } BDRVQcowState;
 
-static int decompress_cluster(BlockDriverState *bs, uint64_t cluster_offset);
+static int coroutine_fn decompress_cluster(BlockDriverState *bs,
+                                           uint64_t cluster_offset);
 
 static int qcow_probe(const uint8_t *buf, int buf_size, const char *filename)
 {
@@ -268,7 +269,7 @@ static void encrypt_sectors(BDRVQcowState *s, int64_t sector_num,
  *
  * return 0 if not allocated.
  */
-static uint64_t get_cluster_offset(BlockDriverState *bs,
+static uint64_t coroutine_fn get_cluster_offset(BlockDriverState *bs,
                                    uint64_t offset, int allocate,
                                    int compressed_size,
                                    int n_start, int n_end)
@@ -440,7 +441,8 @@ static int decompress_buffer(uint8_t *out_buf, int out_buf_size,
     return 0;
 }
 
-static int decompress_cluster(BlockDriverState *bs, uint64_t cluster_offset)
+static int coroutine_fn decompress_cluster(BlockDriverState *bs,
+                                           uint64_t cluster_offset)
 {
     BDRVQcowState *s = bs->opaque;
     int ret, csize;
@@ -638,7 +640,7 @@ static coroutine_fn int qcow_co_writev(BlockDriverState *bs, int64_t sector_num,
     return ret;
 }
 
-static void qcow_close(BlockDriverState *bs)
+static void coroutine_fn qcow_close(BlockDriverState *bs)
 {
     BDRVQcowState *s = bs->opaque;
 
@@ -778,8 +780,10 @@ static int qcow_make_empty(BlockDriverState *bs)
 
 /* XXX: put compressed sectors first, then all the cluster aligned
    tables to avoid losing bytes in alignment */
-static int qcow_write_compressed(BlockDriverState *bs, int64_t sector_num,
-                                 const uint8_t *buf, int nb_sectors)
+static int coroutine_fn qcow_write_compressed(BlockDriverState *bs,
+                                              int64_t sector_num,
+                                              const uint8_t *buf,
+                                              int nb_sectors)
 {
     BDRVQcowState *s = bs->opaque;
     z_stream strm;

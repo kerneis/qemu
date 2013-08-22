@@ -197,7 +197,7 @@ static void qed_check_for_leaks(QEDCheck *check)
 /**
  * Mark an image clean once it passes check or has been repaired
  */
-static void qed_check_mark_clean(BDRVQEDState *s, BdrvCheckResult *result)
+static void coroutine_fn qed_check_mark_clean(BDRVQEDState *s, BdrvCheckResult *result)
 {
     /* Skip if there were unfixable corruptions or I/O errors */
     if (result->corruptions > 0 || result->check_errors > 0) {
@@ -216,7 +216,7 @@ static void qed_check_mark_clean(BDRVQEDState *s, BdrvCheckResult *result)
     qed_write_header_sync(s);
 }
 
-int qed_check(BDRVQEDState *s, BdrvCheckResult *result, bool fix)
+int coroutine_fn qed_check(BDRVQEDState *s, BdrvCheckResult *result, bool fix)
 {
     QEDCheck check = {
         .s = s,

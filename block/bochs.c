@@ -165,7 +165,8 @@ fail:
     return ret;
 }
 
-static int64_t seek_to_sector(BlockDriverState *bs, int64_t sector_num)
+static int64_t coroutine_fn seek_to_sector(BlockDriverState *bs,
+                                           int64_t sector_num)
 {
     BDRVBochsState *s = bs->opaque;
     int64_t offset = sector_num * 512;
@@ -196,7 +197,7 @@ static int64_t seek_to_sector(BlockDriverState *bs, int64_t sector_num)
     return bitmap_offset + (512 * (s->bitmap_blocks + extent_offset));
 }
 
-static int bochs_read(BlockDriverState *bs, int64_t sector_num,
+static int coroutine_fn bochs_read(BlockDriverState *bs, int64_t sector_num,
                     uint8_t *buf, int nb_sectors)
 {
     int ret;
@@ -228,7 +229,7 @@ static coroutine_fn int bochs_co_read(BlockDriverState *bs, int64_t sector_num,
     return ret;
 }
 
-static void bochs_close(BlockDriverState *bs)
+static void coroutine_fn bochs_close(BlockDriverState *bs)
 {
     BDRVBochsState *s = bs->opaque;
     g_free(s->catalog_bitmap);

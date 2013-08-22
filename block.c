@@ -1370,7 +1370,7 @@ void bdrv_reopen_abort(BDRVReopenState *reopen_state)
 }
 
 
-void bdrv_close(BlockDriverState *bs)
+void coroutine_fn bdrv_close(BlockDriverState *bs)
 {
     if (bs->job) {
         block_job_cancel_sync(bs->job);
@@ -1419,7 +1419,7 @@ void bdrv_close(BlockDriverState *bs)
     }
 }
 
-void bdrv_close_all(void)
+void coroutine_fn bdrv_close_all(void)
 {
     BlockDriverState *bs;
 
@@ -1600,7 +1600,7 @@ void bdrv_append(BlockDriverState *bs_new, BlockDriverState *bs_top)
             bs_new->drv ? bs_new->drv->format_name : "");
 }
 
-void bdrv_delete(BlockDriverState *bs)
+void coroutine_fn bdrv_delete(BlockDriverState *bs)
 {
     assert(!bs->dev);
     assert(!bs->job);
@@ -1819,7 +1819,7 @@ int coroutine_fn bdrv_commit(BlockDriverState *bs)
 
     if (drv->bdrv_make_empty) {
         ret = drv->bdrv_make_empty(bs);
-        bdrv_sync_flush(bs);
+        bdrv_flush(bs);
     }
 
     /*
@@ -1827,7 +1827,7 @@ int coroutine_fn bdrv_commit(BlockDriverState *bs)
      * stable on disk.
      */
     if (bs->backing_hd)
-        bdrv_sync_flush(bs->backing_hd);
+        bdrv_flush(bs->backing_hd);
 
 ro_cleanup:
     g_free(buf);
@@ -1860,7 +1860,7 @@ int coroutine_fn bdrv_commit_all(void)
  *
  * This function should be called when a tracked request is completing.
  */
-static void tracked_request_end(BdrvTrackedRequest *req)
+static void coroutine_fn tracked_request_end(BdrvTrackedRequest *req)
 {
     QLIST_REMOVE(req, list);
     qemu_co_queue_restart_all(&req->wait_queue);
@@ -1869,7 +1869,7 @@ static void tracked_request_end(BdrvTrackedRequest *req)
 /**
  * Add an active request to the tracked requests list
  */
-static void tracked_request_begin(BdrvTrackedRequest *req,
+static void coroutine_fn tracked_request_begin(BdrvTrackedRequest *req,
                                   BlockDriverState *bs,
                                   int64_t sector_num,
                                   int nb_sectors, bool is_write)
@@ -2056,8 +2056,9 @@ typedef struct BlkIntermediateStates {
  *  if active == top, that is considered an error
  *
  */
-int bdrv_drop_intermediate(BlockDriverState *active, BlockDriverState *top,
-                           BlockDriverState *base)
+int coroutine_fn bdrv_drop_intermediate(BlockDriverState *active,
+                                        BlockDriverState *top,
+                                        BlockDriverState *base)
 {
     BlockDriverState *intermediate;
     BlockDriverState *base_bs = NULL;
@@ -2311,12 +2312,14 @@ int coroutine_fn bdrv_write(BlockDriverState *bs, int64_t sector_num,
     return bdrv_rw_co(bs, sector_num, (uint8_t *)buf, nb_sectors, true, 0);
 }
 
-int coroutine_fn bdrv_writev(BlockDriverState *bs, int64_t sector_num, QEMUIOVector *qiov)
+int coroutine_fn bdrv_writev(BlockDriverState *bs, int64_t sector_num,
+                             QEMUIOVector *qiov)
 {
     return bdrv_rwv_co(bs, sector_num, qiov, true, 0);
 }
 
-int bdrv_write_zeroes(BlockDriverState *bs, int64_t sector_num, int nb_sectors)
+int coroutine_fn bdrv_write_zeroes(BlockDriverState *bs, int64_t sector_num,
+                                   int nb_sectors)
 {
     return bdrv_rw_co(bs, sector_num, NULL, nb_sectors, true,
                       BDRV_REQ_ZERO_WRITE);
@@ -2765,7 +2768,7 @@ int coroutine_fn bdrv_co_write_zeroes(BlockDriverState *bs,
 /**
  * Truncate file to 'offset' bytes (needed only for file protocols)
  */
-int bdrv_truncate(BlockDriverState *bs, int64_t offset)
+int coroutine_fn bdrv_truncate(BlockDriverState *bs, int64_t offset)
 {
     BlockDriver *drv = bs->drv;
     int ret;
@@ -3009,7 +3012,7 @@ int bdrv_get_flags(BlockDriverState *bs)
     return bs->open_flags;
 }
 
-int bdrv_flush_all(void)
+int coroutine_fn bdrv_flush_all(void)
 {
     BlockDriverState *bs;
     int result = 0;
@@ -3230,7 +3233,7 @@ void bdrv_get_backing_filename(BlockDriverState *bs,
     pstrcpy(filename, filename_size, bs->backing_file);
 }
 
-int bdrv_write_compressed(BlockDriverState *bs, int64_t sector_num,
+int coroutine_fn bdrv_write_compressed(BlockDriverState *bs, int64_t sector_num,
                           const uint8_t *buf, int nb_sectors)
 {
     BlockDriver *drv = bs->drv;
@@ -3298,7 +3301,7 @@ int bdrv_load_vmstate(BlockDriverState *bs, uint8_t *buf,
     return -ENOTSUP;
 }
 
-void bdrv_debug_event(BlockDriverState *bs, BlkDebugEvent event)
+void coroutine_fn bdrv_debug_event(BlockDriverState *bs, BlkDebugEvent event)
 {
     if (!bs || !bs->drv || !bs->drv->bdrv_debug_event) {
         return;

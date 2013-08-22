@@ -165,7 +165,7 @@ fail:
     return ret;
 }
 
-static void blkverify_close(BlockDriverState *bs)
+static void coroutine_fn blkverify_close(BlockDriverState *bs)
 {
     BDRVBlkverifyState *s = bs->opaque;
 

@@ -106,7 +106,7 @@ static int coroutine_fn cow_co_open(BlockDriverState *bs, QDict *options, int fl
  * XXX(hch): right now these functions are extremely inefficient.
  * We should just read the whole bitmap we'll need in one go instead.
  */
-static inline int cow_set_bit(BlockDriverState *bs, int64_t bitnum)
+static inline int coroutine_fn cow_set_bit(BlockDriverState *bs, int64_t bitnum)
 {
     uint64_t offset = sizeof(struct cow_header_v2) + bitnum / 8;
     uint8_t bitmap;
@@ -126,7 +126,7 @@ static inline int cow_set_bit(BlockDriverState *bs, int64_t bitnum)
     return 0;
 }
 
-static inline int is_bit_set(BlockDriverState *bs, int64_t bitnum)
+static inline int coroutine_fn is_bit_set(BlockDriverState *bs, int64_t bitnum)
 {
     uint64_t offset = sizeof(struct cow_header_v2) + bitnum / 8;
     uint8_t bitmap;
@@ -166,8 +166,8 @@ static int coroutine_fn cow_co_is_allocated(BlockDriverState *bs,
     return changed;
 }
 
-static int cow_update_bitmap(BlockDriverState *bs, int64_t sector_num,
-        int nb_sectors)
+static int coroutine_fn cow_update_bitmap(BlockDriverState *bs,
+                                          int64_t sector_num, int nb_sectors)
 {
     int error = 0;
     int i;
@@ -225,7 +225,7 @@ static coroutine_fn int cow_co_read(BlockDriverState *bs, int64_t sector_num,
     return ret;
 }
 
-static int cow_write(BlockDriverState *bs, int64_t sector_num,
+static int coroutine_fn cow_write(BlockDriverState *bs, int64_t sector_num,
                      const uint8_t *buf, int nb_sectors)
 {
     BDRVCowState *s = bs->opaque;
@@ -251,7 +251,7 @@ static coroutine_fn int cow_co_write(BlockDriverState *bs, int64_t sector_num,
     return ret;
 }
 
-static void cow_close(BlockDriverState *bs)
+static void coroutine_fn cow_close(BlockDriverState *bs)
 {
 }
 

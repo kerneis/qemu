@@ -82,8 +82,10 @@ static int qcow2_probe(const uint8_t *buf, int buf_size, const char *filename)
  * unknown magic is skipped (future extension this version knows nothing about)
  * return 0 upon success, non-0 otherwise
  */
-static int qcow2_read_extensions(BlockDriverState *bs, uint64_t start_offset,
-                                 uint64_t end_offset, void **p_feature_table)
+static int coroutine_fn qcow2_read_extensions(BlockDriverState *bs,
+                                              uint64_t start_offset,
+                                              uint64_t end_offset,
+                                              void **p_feature_table)
 {
     BDRVQcowState *s = bs->opaque;
     QCowExtension ext;
@@ -227,7 +229,7 @@ static void report_unsupported_feature(BlockDriverState *bs,
  * updated successfully.  Therefore it is not required to check the return
  * value of this function.
  */
-int qcow2_mark_dirty(BlockDriverState *bs)
+int coroutine_fn qcow2_mark_dirty(BlockDriverState *bs)
 {
     BDRVQcowState *s = bs->opaque;
     uint64_t val;
@@ -255,12 +257,14 @@ int qcow2_mark_dirty(BlockDriverState *bs)
     return 0;
 }
 
+static int coroutine_fn qcow2_update_header(BlockDriverState *bs);
+
 /*
  * Clears the dirty bit and flushes before if necessary.  Only call this
  * function when there are no pending requests, it does not guard against
  * concurrent requests dirtying the image.
  */
-static int qcow2_mark_clean(BlockDriverState *bs)
+static int coroutine_fn qcow2_mark_clean(BlockDriverState *bs)
 {
     BDRVQcowState *s = bs->opaque;
 
@@ -276,8 +280,8 @@ static int qcow2_mark_clean(BlockDriverState *bs)
     return 0;
 }
 
-static int qcow2_check(BlockDriverState *bs, BdrvCheckResult *result,
-                       BdrvCheckMode fix)
+static int coroutine_fn qcow2_check(BlockDriverState *bs,
+                                    BdrvCheckResult *result, BdrvCheckMode fix)
 {
     int ret = qcow2_check_refcounts(bs, result, fix);
     if (ret < 0) {
@@ -979,7 +983,7 @@ fail:
     return ret;
 }
 
-static void qcow2_close(BlockDriverState *bs)
+static void coroutine_fn qcow2_close(BlockDriverState *bs)
 {
     BDRVQcowState *s = bs->opaque;
     g_free(s->l1_table);
@@ -1001,7 +1005,7 @@ static void qcow2_close(BlockDriverState *bs)
     qcow2_free_snapshots(bs);
 }
 
-static void qcow2_invalidate_cache(BlockDriverState *bs)
+static void coroutine_fn qcow2_invalidate_cache(BlockDriverState *bs)
 {
     BDRVQcowState *s = bs->opaque;
     int flags = s->flags;
@@ -1066,7 +1070,7 @@ static size_t header_ext_add(char *buf, uint32_t magic, const void *s,
  *
  * Returns 0 on success, -errno in error cases.
  */
-int qcow2_update_header(BlockDriverState *bs)
+static int coroutine_fn qcow2_update_header(BlockDriverState *bs)
 {
     BDRVQcowState *s = bs->opaque;
     QCowHeader *header;
@@ -1228,7 +1232,7 @@ fail:
     return ret;
 }
 
-static int qcow2_change_backing_file(BlockDriverState *bs,
+static int coroutine_fn qcow2_change_backing_file(BlockDriverState *bs,
     const char *backing_file, const char *backing_fmt)
 {
     pstrcpy(bs->backing_file, sizeof(bs->backing_file), backing_file ?: "");
@@ -1237,7 +1241,7 @@ static int qcow2_change_backing_file(BlockDriverState *bs,
     return qcow2_update_header(bs);
 }
 
-static int preallocate(BlockDriverState *bs)
+static int coroutine_fn preallocate(BlockDriverState *bs)
 {
     uint64_t nb_sectors;
     uint64_t offset;
@@ -1293,7 +1297,7 @@ static int preallocate(BlockDriverState *bs)
     return 0;
 }
 
-static int qcow2_create2(const char *filename, int64_t total_size,
+static int coroutine_fn qcow2_create2(const char *filename, int64_t total_size,
                          const char *backing_file, const char *backing_format,
                          int flags, size_t cluster_size, int prealloc,
                          QEMUOptionParameter *options, int version)
@@ -1549,7 +1553,7 @@ static coroutine_fn int qcow2_co_discard(BlockDriverState *bs,
     return ret;
 }
 
-static int qcow2_truncate(BlockDriverState *bs, int64_t offset)
+static int coroutine_fn qcow2_truncate(BlockDriverState *bs, int64_t offset)
 {
     BDRVQcowState *s = bs->opaque;
     int64_t new_l1_size;
@@ -1592,8 +1596,10 @@ static int qcow2_truncate(BlockDriverState *bs, int64_t offset)
 
 /* XXX: put compressed sectors first, then all the cluster aligned
    tables to avoid losing bytes in alignment */
-static int qcow2_write_compressed(BlockDriverState *bs, int64_t sector_num,
-                                  const uint8_t *buf, int nb_sectors)
+static int coroutine_fn qcow2_write_compressed(BlockDriverState *bs,
+                                               int64_t sector_num,
+                                               const uint8_t *buf,
+                                               int nb_sectors)
 {
     BDRVQcowState *s = bs->opaque;
     z_stream strm;
@@ -1738,8 +1744,8 @@ static void dump_refcounts(BlockDriverState *bs)
 }
 #endif
 
-static int qcow2_save_vmstate(BlockDriverState *bs, QEMUIOVector *qiov,
-                              int64_t pos)
+static int coroutine_fn qcow2_save_vmstate(BlockDriverState *bs,
+                                           QEMUIOVector *qiov, int64_t pos)
 {
     BDRVQcowState *s = bs->opaque;
     int growable = bs->growable;
@@ -1753,7 +1759,7 @@ static int qcow2_save_vmstate(BlockDriverState *bs, QEMUIOVector *qiov,
     return ret;
 }
 
-static int qcow2_load_vmstate(BlockDriverState *bs, uint8_t *buf,
+static int coroutine_fn qcow2_load_vmstate(BlockDriverState *bs, uint8_t *buf,
                               int64_t pos, int size)
 {
     BDRVQcowState *s = bs->opaque;

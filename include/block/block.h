@@ -125,7 +125,7 @@ BlockDriverState *bdrv_new(const char *device_name);
 void bdrv_make_anon(BlockDriverState *bs);
 void bdrv_swap(BlockDriverState *bs_new, BlockDriverState *bs_old);
 void bdrv_append(BlockDriverState *bs_new, BlockDriverState *bs_top);
-void bdrv_delete(BlockDriverState *bs);
+void coroutine_fn bdrv_delete(BlockDriverState *bs);
 int bdrv_parse_cache_flags(const char *mode, int *flags);
 int bdrv_parse_discard_flags(const char *mode, int *flags);
 int coroutine_fn bdrv_file_open(BlockDriverState **pbs, const char *filename,
@@ -141,7 +141,7 @@ int bdrv_reopen_prepare(BDRVReopenState *reopen_state,
                         BlockReopenQueue *queue, Error **errp);
 void bdrv_reopen_commit(BDRVReopenState *reopen_state);
 void bdrv_reopen_abort(BDRVReopenState *reopen_state);
-void bdrv_close(BlockDriverState *bs);
+void coroutine_fn bdrv_close(BlockDriverState *bs);
 void bdrv_add_close_notifier(BlockDriverState *bs, Notifier *notify);
 int bdrv_attach_dev(BlockDriverState *bs, void *dev);
 void bdrv_attach_dev_nofail(BlockDriverState *bs, void *dev);
@@ -163,7 +163,7 @@ int coroutine_fn bdrv_write(BlockDriverState *bs, int64_t sector_num,
                const uint8_t *buf, int nb_sectors);
 int bdrv_sync_write(BlockDriverState *bs, int64_t sector_num,
                const uint8_t *buf, int nb_sectors);
-int bdrv_write_zeroes(BlockDriverState *bs, int64_t sector_num,
+int coroutine_fn bdrv_write_zeroes(BlockDriverState *bs, int64_t sector_num,
                int nb_sectors);
 int coroutine_fn bdrv_writev(BlockDriverState *bs, int64_t sector_num, QEMUIOVector *qiov);
 int coroutine_fn bdrv_pread(BlockDriverState *bs, int64_t offset,
@@ -173,6 +173,8 @@ int bdrv_sync_pread(BlockDriverState *bs, int64_t offset,
 int coroutine_fn bdrv_pwrite(BlockDriverState *bs, int64_t offset,
                 const void *buf, int count);
 int bdrv_sync_pwrite(BlockDriverState *bs, int64_t offset,
+                const void *buf, int count);
+int bdrv_pwrite_sync(BlockDriverState *bs, int64_t offset,
                 const void *buf, int count);
 int coroutine_fn bdrv_pwritev(BlockDriverState *bs, int64_t offset, QEMUIOVector *qiov);
 int bdrv_sync_pwritev(BlockDriverState *bs, int64_t offset, QEMUIOVector *qiov);
@@ -199,7 +201,7 @@ int coroutine_fn bdrv_co_is_allocated_above(BlockDriverState *top,
 BlockDriverState *bdrv_find_backing_image(BlockDriverState *bs,
     const char *backing_file);
 int bdrv_get_backing_file_depth(BlockDriverState *bs);
-int bdrv_truncate(BlockDriverState *bs, int64_t offset);
+int coroutine_fn bdrv_truncate(BlockDriverState *bs, int64_t offset);
 int64_t bdrv_getlength(BlockDriverState *bs);
 int64_t bdrv_get_allocated_file_size(BlockDriverState *bs);
 void bdrv_get_geometry(BlockDriverState *bs, uint64_t *nb_sectors_ptr);
@@ -208,7 +210,7 @@ int coroutine_fn bdrv_commit_all(void);
 int bdrv_change_backing_file(BlockDriverState *bs,
     const char *backing_file, const char *backing_fmt);
 void bdrv_register(BlockDriver *bdrv);
-int bdrv_drop_intermediate(BlockDriverState *active, BlockDriverState *top,
+int coroutine_fn bdrv_drop_intermediate(BlockDriverState *active, BlockDriverState *top,
                            BlockDriverState *base);
 BlockDriverState *bdrv_find_overlay(BlockDriverState *active,
                                     BlockDriverState *bs);
@@ -278,8 +280,8 @@ void bdrv_clear_incoming_migration_all(void);
 /* Ensure contents are flushed to disk.  */
 int coroutine_fn bdrv_flush(BlockDriverState *bs);
 int bdrv_sync_flush(BlockDriverState *bs);
-int bdrv_flush_all(void);
-void bdrv_close_all(void);
+int coroutine_fn bdrv_flush_all(void);
+void coroutine_fn bdrv_close_all(void);
 void bdrv_drain_all(void);
 
 int coroutine_fn bdrv_discard(BlockDriverState *bs, int64_t sector_num, int nb_sectors);
@@ -445,7 +447,7 @@ typedef enum {
 } BlkDebugEvent;
 
 #define BLKDBG_EVENT(bs, evt) bdrv_debug_event(bs, evt)
-void bdrv_debug_event(BlockDriverState *bs, BlkDebugEvent event);
+void coroutine_fn bdrv_debug_event(BlockDriverState *bs, BlkDebugEvent event);
 
 int bdrv_debug_breakpoint(BlockDriverState *bs, const char *event,
                            const char *tag);

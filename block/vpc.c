@@ -438,7 +438,7 @@ fail:
     return -1;
 }
 
-static int vpc_read(BlockDriverState *bs, int64_t sector_num,
+static int coroutine_fn vpc_read(BlockDriverState *bs, int64_t sector_num,
                     uint8_t *buf, int nb_sectors)
 {
     BDRVVPCState *s = bs->opaque;
@@ -487,7 +487,7 @@ static coroutine_fn int vpc_co_read(BlockDriverState *bs, int64_t sector_num,
     return ret;
 }
 
-static int vpc_write(BlockDriverState *bs, int64_t sector_num,
+static int coroutine_fn vpc_write(BlockDriverState *bs, int64_t sector_num,
     const uint8_t *buf, int nb_sectors)
 {
     BDRVVPCState *s = bs->opaque;
@@ -798,7 +798,7 @@ static int vpc_has_zero_init(BlockDriverState *bs)
     }
 }
 
-static void vpc_close(BlockDriverState *bs)
+static void coroutine_fn vpc_close(BlockDriverState *bs)
 {
     BDRVVPCState *s = bs->opaque;
     g_free(s->pagetable);

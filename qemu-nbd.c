@@ -559,7 +559,7 @@ int main(int argc, char **argv)
 
     qemu_init_main_loop();
     bdrv_init();
-    atexit(bdrv_close_all);
+    atexit(bdrv_sync_close_all);
 
     if (fmt) {
         drv = bdrv_find_format(fmt);
@@ -572,7 +572,7 @@ int main(int argc, char **argv)
 
     bs = bdrv_new("hda");
     srcpath = argv[optind];
-    ret = bdrv_open(bs, srcpath, NULL, flags, drv);
+    ret = bdrv_sync_open(bs, srcpath, NULL, flags, drv);
     if (ret < 0) {
         errno = -ret;
         err(EXIT_FAILURE, "Failed to bdrv_open '%s'", argv[optind]);
@@ -633,7 +633,7 @@ int main(int argc, char **argv)
         }
     } while (state != TERMINATED);
 
-    bdrv_close(bs);
+    bdrv_sync_close(bs);
     if (sockpath) {
         unlink(sockpath);
     }

@@ -331,7 +331,7 @@ static BlockDriverAIOCB *raw_aio_flush(BlockDriverState *bs,
     return paio_submit(bs, s->hfile, 0, NULL, 0, cb, opaque, QEMU_AIO_FLUSH);
 }
 
-static void raw_close(BlockDriverState *bs)
+static void coroutine_fn raw_close(BlockDriverState *bs)
 {
     BDRVRawState *s = bs->opaque;
     CloseHandle(s->hfile);
@@ -420,7 +420,7 @@ static int64_t raw_get_allocated_file_size(BlockDriverState *bs)
     return st.st_size;
 }
 
-static int raw_create(const char *filename, QEMUOptionParameter *options)
+static int coroutine_fn raw_create(const char *filename, QEMUOptionParameter *options)
 {
     int fd;
     int64_t total_size = 0;

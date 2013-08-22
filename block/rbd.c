@@ -572,7 +572,7 @@ failed_opts:
     return r;
 }
 
-static void qemu_rbd_close(BlockDriverState *bs)
+static void coroutine_fn qemu_rbd_close(BlockDriverState *bs)
 {
     BDRVRBDState *s = bs->opaque;
 

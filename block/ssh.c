@@ -709,7 +709,7 @@ static int coroutine_fn ssh_co_create(const char *filename, QEMUOptionParameter 
     return ret;
 }
 
-static void ssh_close(BlockDriverState *bs)
+static void coroutine_fn ssh_close(BlockDriverState *bs)
 {
     BDRVSSHState *s = bs->opaque;
 

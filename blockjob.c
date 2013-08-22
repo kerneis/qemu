@@ -187,7 +187,7 @@ int block_job_cancel_sync(BlockJob *job)
     return (data.cancelled && data.ret == 0) ? -ECANCELED : data.ret;
 }
 
-void block_job_sleep_ns(BlockJob *job, QEMUClock *clock, int64_t ns)
+void coroutine_fn block_job_sleep_ns(BlockJob *job, QEMUClock *clock, int64_t ns)
 {
     assert(job->busy);
 

@@ -487,7 +487,7 @@ static int coroutine_fn vdi_co_is_allocated(BlockDriverState *bs,
     return VDI_IS_ALLOCATED(bmap_entry);
 }
 
-static int vdi_co_read(BlockDriverState *bs,
+static int coroutine_fn vdi_co_read(BlockDriverState *bs,
         int64_t sector_num, uint8_t *buf, int nb_sectors)
 {
     BDRVVdiState *s = bs->opaque;
@@ -532,7 +532,7 @@ static int vdi_co_read(BlockDriverState *bs,
     return ret;
 }
 
-static int vdi_co_write(BlockDriverState *bs,
+static int coroutine_fn vdi_co_write(BlockDriverState *bs,
         int64_t sector_num, const uint8_t *buf, int nb_sectors)
 {
     BDRVVdiState *s = bs->opaque;
@@ -736,7 +736,7 @@ static int coroutine_fn vdi_co_create(const char *filename, QEMUOptionParameter 
     return result;
 }
 
-static void vdi_close(BlockDriverState *bs)
+static void coroutine_fn vdi_close(BlockDriverState *bs)
 {
     BDRVVdiState *s = bs->opaque;
 
