@@ -26,7 +26,8 @@
 #include "block/block_int.h"
 #include "block/qcow2.h"
 
-static int64_t alloc_clusters_noref(BlockDriverState *bs, int64_t size);
+static int64_t coroutine_fn alloc_clusters_noref(BlockDriverState *bs,
+    int64_t size);
 static int QEMU_WARN_UNUSED_RESULT coroutine_fn update_refcount(
                             BlockDriverState *bs, int64_t offset,
                             int64_t length, int addend,
@@ -64,7 +65,7 @@ void qcow2_refcount_close(BlockDriverState *bs)
 }
 
 
-static int load_refcount_block(BlockDriverState *bs,
+static int coroutine_fn load_refcount_block(BlockDriverState *bs,
                                int64_t refcount_block_offset,
                                void **refcount_block)
 {
@@ -83,7 +84,8 @@ static int load_refcount_block(BlockDriverState *bs,
  * return value is the refcount of the cluster, negative values are -errno
  * and indicate an error.
  */
-static int get_refcount(BlockDriverState *bs, int64_t cluster_index)
+static int coroutine_fn get_refcount(BlockDriverState *bs,
+    int64_t cluster_index)
 {
     BDRVQcowState *s = bs->opaque;
     int refcount_table_index, block_index;

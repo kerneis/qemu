@@ -121,7 +121,7 @@ int coroutine_fn qcow2_grow_l1_table(BlockDriverState *bs, uint64_t min_size,
  * the image file failed.
  */
 
-static int l2_load(BlockDriverState *bs, uint64_t l2_offset,
+static int coroutine_fn l2_load(BlockDriverState *bs, uint64_t l2_offset,
     uint64_t **l2_table)
 {
     BDRVQcowState *s = bs->opaque;
@@ -137,7 +137,7 @@ static int l2_load(BlockDriverState *bs, uint64_t l2_offset,
  * and we really don't want bdrv_pread to perform a read-modify-write)
  */
 #define L1_ENTRIES_PER_SECTOR (512 / 8)
-static int write_l1_entry(BlockDriverState *bs, int l1_index)
+static int coroutine_fn write_l1_entry(BlockDriverState *bs, int l1_index)
 {
     BDRVQcowState *s = bs->opaque;
     uint64_t buf[L1_ENTRIES_PER_SECTOR];
@@ -396,7 +396,7 @@ out:
  * Returns the cluster type (QCOW2_CLUSTER_*) on success, -errno in error
  * cases.
  */
-int qcow2_get_cluster_offset(BlockDriverState *bs, uint64_t offset,
+int coroutine_fn qcow2_get_cluster_offset(BlockDriverState *bs, uint64_t offset,
     int *num, uint64_t *cluster_offset)
 {
     BDRVQcowState *s = bs->opaque;

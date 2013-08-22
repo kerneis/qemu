@@ -131,7 +131,9 @@ int bdrv_parse_discard_flags(const char *mode, int *flags);
 int coroutine_fn bdrv_file_open(BlockDriverState **pbs, const char *filename,
                    QDict *options, int flags);
 int coroutine_fn bdrv_open_backing_file(BlockDriverState *bs, QDict *options);
-int bdrv_open(BlockDriverState *bs, const char *filename, QDict *options,
+int coroutine_fn bdrv_open(BlockDriverState *bs, const char *filename,
+        QDict *options, int flags, BlockDriver *drv);
+int bdrv_sync_open(BlockDriverState *bs, const char *filename, QDict *options,
               int flags, BlockDriver *drv);
 BlockReopenQueue *bdrv_reopen_queue(BlockReopenQueue *bs_queue,
                                     BlockDriverState *bs, int flags);
@@ -142,6 +144,7 @@ int bdrv_reopen_prepare(BDRVReopenState *reopen_state,
 void bdrv_reopen_commit(BDRVReopenState *reopen_state);
 void bdrv_reopen_abort(BDRVReopenState *reopen_state);
 void coroutine_fn bdrv_close(BlockDriverState *bs);
+void bdrv_sync_close(BlockDriverState *bs);
 void bdrv_add_close_notifier(BlockDriverState *bs, Notifier *notify);
 int bdrv_attach_dev(BlockDriverState *bs, void *dev);
 void bdrv_attach_dev_nofail(BlockDriverState *bs, void *dev);
@@ -184,6 +187,7 @@ int coroutine_fn bdrv_co_copy_on_readv(BlockDriverState *bs,
     int64_t sector_num, int nb_sectors, QEMUIOVector *qiov);
 int coroutine_fn bdrv_co_writev(BlockDriverState *bs, int64_t sector_num,
     int nb_sectors, QEMUIOVector *qiov);
+
 /*
  * Efficiently zero a region of the disk image.  Note that this is a regular
  * I/O request like read or write and should have a reasonable size.  This
@@ -202,6 +206,7 @@ BlockDriverState *bdrv_find_backing_image(BlockDriverState *bs,
     const char *backing_file);
 int bdrv_get_backing_file_depth(BlockDriverState *bs);
 int coroutine_fn bdrv_truncate(BlockDriverState *bs, int64_t offset);
+int bdrv_sync_truncate(BlockDriverState *bs, int64_t offset);
 int64_t bdrv_getlength(BlockDriverState *bs);
 int64_t bdrv_get_allocated_file_size(BlockDriverState *bs);
 void bdrv_get_geometry(BlockDriverState *bs, uint64_t *nb_sectors_ptr);
@@ -282,6 +287,7 @@ int coroutine_fn bdrv_flush(BlockDriverState *bs);
 int bdrv_sync_flush(BlockDriverState *bs);
 int coroutine_fn bdrv_flush_all(void);
 void coroutine_fn bdrv_close_all(void);
+void bdrv_sync_close_all(void);
 void bdrv_drain_all(void);
 
 int coroutine_fn bdrv_discard(BlockDriverState *bs, int64_t sector_num, int nb_sectors);
