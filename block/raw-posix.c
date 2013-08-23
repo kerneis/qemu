@@ -865,7 +865,7 @@ static void coroutine_fn raw_close(BlockDriverState *bs)
     }
 }
 
-static int raw_truncate(BlockDriverState *bs, int64_t offset)
+static int coroutine_fn raw_truncate(BlockDriverState *bs, int64_t offset)
 {
     BDRVRawState *s = bs->opaque;
     struct stat st;

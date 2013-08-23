@@ -334,7 +334,7 @@ static int vdi_get_info(BlockDriverState *bs, BlockDriverInfo *bdi)
     return 0;
 }
 
-static int vdi_make_empty(BlockDriverState *bs)
+static int coroutine_fn vdi_make_empty(BlockDriverState *bs)
 {
     /* TODO: missing code. */
     logout("\n");

@@ -772,6 +772,45 @@ free_and_fail:
     return ret;
 }
 
+typedef struct FoCo {
+    BlockDriverState **pbs;
+    const char *filename;
+    QDict *options;
+    int flags;
+    int ret;
+} FoCo;
+
+
+static void coroutine_fn bdrv_file_open_co_entry(void *opaque)
+{
+    FoCo *foco = opaque;
+
+    foco->ret = bdrv_file_open(foco->pbs, foco->filename, foco->options,
+            foco->flags);
+}
+
+int bdrv_sync_file_open(BlockDriverState **pbs, const char *filename,
+                   QDict *options, int flags)
+{
+    Coroutine *co;
+    struct FoCo foco = {
+        .pbs = pbs,
+        .filename = filename,
+        .options = options,
+        .flags = flags,
+        .ret = NOT_DONE,
+    };
+
+    co = qemu_coroutine_create(bdrv_file_open_co_entry);
+    qemu_coroutine_enter(co, &foco);
+    while (foco.ret == NOT_DONE) {
+        qemu_aio_wait();
+    }
+
+    return foco.ret;
+}
+
+
 /*
  * Opens a file using a protocol (file, host_device, nbd, ...)
  *
@@ -953,6 +992,46 @@ static void extract_subqdict(QDict *src, QDict **dst, const char *start)
         entry = next;
     }
 }
+
+struct OpCo {
+    BlockDriverState *bs;
+    const char *filename;
+    QDict *options;
+    int flags;
+    BlockDriver *drv;
+    int ret;
+};
+
+static void coroutine_fn bdrv_open_co_entry(void *opaque)
+{
+    struct OpCo *opco = opaque;
+    opco->ret = bdrv_open(opco->bs, opco->filename, opco->options,
+            opco->flags, opco->drv);
+}
+
+int bdrv_sync_open(BlockDriverState *bs, const char *filename, QDict *options,
+              int flags, BlockDriver *drv)
+{
+    Coroutine *co;
+    struct OpCo opco = {
+        .bs = bs,
+        .filename = filename,
+        .options = options,
+        .flags = flags,
+        .drv = drv,
+        .ret = NOT_DONE,
+
+    };
+
+    co = qemu_coroutine_create(bdrv_open_co_entry);
+    qemu_coroutine_enter(co, &opco);
+    while (opco.ret == NOT_DONE) {
+        qemu_aio_wait();
+    }
+
+    return opco.ret;
+}
+
 
 /*
  * Opens a disk image (raw, qcow2, vmdk, ...)
@@ -1370,6 +1449,34 @@ void bdrv_reopen_abort(BDRVReopenState *reopen_state)
 }
 
 
+typedef struct ClCo {
+    BlockDriverState *bs;
+    bool done;
+} ClCo;
+
+static void coroutine_fn bdrv_close_co_entry(void *opaque)
+{
+    ClCo *clco = opaque;
+    bdrv_close(clco->bs);
+    clco->done = true;
+}
+
+void bdrv_sync_close(BlockDriverState *bs)
+{
+    Coroutine *co;
+    ClCo clco = {
+        .bs = bs,
+        .done = false,
+    };
+
+    co = qemu_coroutine_create(bdrv_close_co_entry);
+    qemu_coroutine_enter(co, &clco);
+    while (!clco.done) {
+        qemu_aio_wait();
+    }
+}
+
+
 void coroutine_fn bdrv_close(BlockDriverState *bs)
 {
     if (bs->job) {
@@ -1416,6 +1523,15 @@ void coroutine_fn bdrv_close(BlockDriverState *bs)
     /*throttling disk I/O limits*/
     if (bs->io_limits_enabled) {
         bdrv_io_limits_disable(bs);
+    }
+}
+
+void bdrv_sync_close_all(void)
+{
+    BlockDriverState *bs;
+
+    QTAILQ_FOREACH(bs, &bdrv_states, list) {
+        bdrv_sync_close(bs);
     }
 }
 
@@ -1598,6 +1714,28 @@ void bdrv_append(BlockDriverState *bs_new, BlockDriverState *bs_top)
             bs_new->filename);
     pstrcpy(bs_top->backing_format, sizeof(bs_top->backing_format),
             bs_new->drv ? bs_new->drv->format_name : "");
+}
+
+static void coroutine_fn bdrv_delete_co_entry(void *opaque)
+{
+    ClCo *clco = opaque;
+    bdrv_delete(clco->bs);
+    clco->done = true;
+}
+
+void bdrv_sync_delete(BlockDriverState *bs)
+{
+    Coroutine *co;
+    ClCo clco = {
+        .bs = bs,
+        .done = false,
+    };
+
+    co = qemu_coroutine_create(bdrv_delete_co_entry);
+    qemu_coroutine_enter(co, &clco);
+    while (!clco.done) {
+        qemu_aio_wait();
+    }
 }
 
 void coroutine_fn bdrv_delete(BlockDriverState *bs)
@@ -2764,6 +2902,39 @@ int coroutine_fn bdrv_co_write_zeroes(BlockDriverState *bs,
     return bdrv_co_do_writev(bs, sector_num, nb_sectors, NULL,
                              BDRV_REQ_ZERO_WRITE);
 }
+
+
+struct TrCo {
+    BlockDriverState *bs;
+    int64_t offset;
+    int ret;
+};
+
+static void coroutine_fn bdrv_truncate_co_entry(void *opaque)
+{
+    struct TrCo *trco = opaque;
+    trco->ret = bdrv_truncate(trco->bs, trco->offset);
+}
+
+int bdrv_sync_truncate(BlockDriverState *bs, int64_t offset)
+{
+    Coroutine *co;
+    struct TrCo trco = {
+        .bs = bs,
+        .offset = offset,
+        .ret = NOT_DONE,
+    };
+
+    co = qemu_coroutine_create(bdrv_truncate_co_entry);
+    qemu_coroutine_enter(co, &trco);
+    while (trco.ret == NOT_DONE) {
+        qemu_aio_wait();
+    }
+
+    return trco.ret;
+}
+
+
 
 /**
  * Truncate file to 'offset' bytes (needed only for file protocols)
