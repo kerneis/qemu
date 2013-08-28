@@ -51,8 +51,9 @@ static int coroutine_fn stream_populate(BlockDriverState *bs,
     return bdrv_co_copy_on_readv(bs, sector_num, nb_sectors, &qiov);
 }
 
-static void close_unused_images(BlockDriverState *top, BlockDriverState *base,
-                                const char *base_id)
+static void coroutine_fn close_unused_images(BlockDriverState *top,
+                                             BlockDriverState *base,
+                                             const char *base_id)
 {
     BlockDriverState *intermediate;
     intermediate = top->backing_hd;

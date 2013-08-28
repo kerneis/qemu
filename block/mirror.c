@@ -390,7 +390,7 @@ static void coroutine_fn mirror_run(void *opaque)
         should_complete = false;
         if (s->in_flight == 0 && cnt == 0) {
             trace_mirror_before_flush(s);
-            ret = bdrv_co_flush(s->target);
+            ret = bdrv_flush(s->target);
             if (ret < 0) {
                 if (mirror_error_action(s, false, -ret) == BDRV_ACTION_REPORT) {
                     goto immediate_exit;
@@ -507,7 +507,7 @@ static void mirror_complete(BlockJob *job, Error **errp)
     MirrorBlockJob *s = container_of(job, MirrorBlockJob, common);
     int ret;
 
-    ret = bdrv_open_backing_file(s->target, NULL);
+    ret = bdrv_sync_open_backing_file(s->target, NULL);
     if (ret < 0) {
         char backing_filename[PATH_MAX];
         bdrv_get_full_backing_filename(s->target, backing_filename,

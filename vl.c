@@ -4430,7 +4430,7 @@ int main(int argc, char **argv, char **envp)
     os_setup_post();
 
     main_loop();
-    bdrv_close_all();
+    bdrv_sync_close_all();
     pause_all_vcpus();
     res_free();
 #ifdef CONFIG_TPM

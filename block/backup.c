@@ -175,13 +175,34 @@ out:
     return ret;
 }
 
-static int coroutine_fn backup_before_write_notify(
+typedef struct BWNCo {
+    BdrvTrackedRequest *req;
+    int ret;
+} BWNCo;
+
+
+static void coroutine_fn co_backup_before_write_notify(void *opaque)
+{
+    BWNCo *bwnco = opaque;
+    BdrvTrackedRequest *req = bwnco->req;
+
+    bwnco->ret = backup_do_cow(req->bs, req->sector_num, req->nb_sectors, NULL);
+}
+
+static int backup_before_write_notify(
         NotifierWithReturn *notifier,
         void *opaque)
 {
-    BdrvTrackedRequest *req = opaque;
+    Coroutine *co;
+    BWNCo bwnco = {
+        .req = opaque,
+        .ret = 0,
+    };
 
-    return backup_do_cow(req->bs, req->sector_num, req->nb_sectors, NULL);
+    co = qemu_coroutine_create(co_backup_before_write_notify);
+    qemu_coroutine_enter(co, &bwnco);
+    return bwnco.ret;
+    // XXX
 }
 
 static void backup_set_speed(BlockJob *job, int64_t speed, Error **errp)

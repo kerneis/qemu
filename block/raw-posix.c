@@ -1169,7 +1169,7 @@ static int coroutine_fn raw_co_is_allocated(BlockDriverState *bs,
     }
 }
 
-static coroutine_fn BlockDriverAIOCB *raw_aio_discard(BlockDriverState *bs,
+static BlockDriverAIOCB *raw_aio_discard(BlockDriverState *bs,
     int64_t sector_num, int nb_sectors,
     BlockDriverCompletionFunc *cb, void *opaque)
 {
@@ -1485,7 +1485,7 @@ static int fd_open(BlockDriverState *bs)
 
 #endif /* !linux && !FreeBSD */
 
-static coroutine_fn BlockDriverAIOCB *hdev_aio_discard(BlockDriverState *bs,
+static BlockDriverAIOCB *hdev_aio_discard(BlockDriverState *bs,
     int64_t sector_num, int nb_sectors,
     BlockDriverCompletionFunc *cb, void *opaque)
 {

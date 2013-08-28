@@ -96,7 +96,7 @@ void qemu_start_incoming_migration(const char *uri, Error **errp)
     }
 }
 
-static void process_incoming_migration_co(void *opaque)
+static void coroutine_fn process_incoming_migration_co(void *opaque)
 {
     QEMUFile *f = opaque;
     int ret;

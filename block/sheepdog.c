@@ -409,7 +409,7 @@ static inline void free_aio_req(BDRVSheepdogState *s, AIOReq *aio_req)
     acb->nr_pending--;
 }
 
-static void coroutine_fn sd_finish_aiocb(SheepdogAIOCB *acb)
+static void sd_finish_aiocb(SheepdogAIOCB *acb)
 {
     if (!acb->canceled) {
         qemu_coroutine_enter(acb->coroutine, NULL);
@@ -1590,7 +1590,7 @@ static int64_t sd_getlength(BlockDriverState *bs)
     return s->inode.vdi_size;
 }
 
-static int sd_truncate(BlockDriverState *bs, int64_t offset)
+static int coroutine_fn sd_truncate(BlockDriverState *bs, int64_t offset)
 {
     BDRVSheepdogState *s = bs->opaque;
     int ret, fd;
@@ -1628,7 +1628,7 @@ static int sd_truncate(BlockDriverState *bs, int64_t offset)
  * update metadata, this sends a write request to the vdi object.
  * Otherwise, this switches back to sd_co_readv/writev.
  */
-static void coroutine_fn sd_write_done(SheepdogAIOCB *acb)
+static void sd_write_done(SheepdogAIOCB *acb)
 {
     int ret;
     BDRVSheepdogState *s = acb->common.bs->opaque;
