@@ -170,7 +170,7 @@ static int socket_get_fd(void *opaque)
     return s->fd;
 }
 
-static int socket_get_buffer(void *opaque, uint8_t *buf, int64_t pos, int size)
+static int coroutine_fn socket_get_buffer(void *opaque, uint8_t *buf, int64_t pos, int size)
 {
     QEMUFileSocket *s = opaque;
     ssize_t len;
@@ -214,7 +214,7 @@ static int stdio_put_buffer(void *opaque, const uint8_t *buf, int64_t pos, int s
     return fwrite(buf, 1, size, s->stdio_file);
 }
 
-static int stdio_get_buffer(void *opaque, uint8_t *buf, int64_t pos, int size)
+static int coroutine_fn stdio_get_buffer(void *opaque, uint8_t *buf, int64_t pos, int size)
 {
     QEMUFileStdio *s = opaque;
     FILE *fp = s->stdio_file;
@@ -372,7 +372,7 @@ static ssize_t unix_writev_buffer(void *opaque, struct iovec *iov, int iovcnt,
     return total;
 }
 
-static int unix_get_buffer(void *opaque, uint8_t *buf, int64_t pos, int size)
+static int coroutine_fn unix_get_buffer(void *opaque, uint8_t *buf, int64_t pos, int size)
 {
     QEMUFileSocket *s = opaque;
     ssize_t len;
@@ -534,7 +534,7 @@ static int block_get_buffer(void *opaque, uint8_t *buf, int64_t pos, int size)
 
 static int bdrv_fclose(void *opaque)
 {
-    return bdrv_flush(opaque);
+    return bdrv_sync_flush(opaque);
 }
 
 static const QEMUFileOps bdrv_read_ops = {

@@ -446,8 +446,8 @@ static int do_vm_stop(RunState state)
         monitor_protocol_event(QEVENT_STOP, NULL);
     }
 
-    bdrv_drain_all();
-    ret = bdrv_flush_all();
+    bdrv_sync_drain_all();
+    ret = bdrv_sync_flush_all();
 
     return ret;
 }

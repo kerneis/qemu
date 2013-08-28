@@ -563,7 +563,7 @@ static void nvme_clear_ctrl(NvmeCtrl *n)
         }
     }
 
-    bdrv_flush(n->conf.bs);
+    bdrv_sync_flush(n->conf.bs);
     n->bar.cc = 0;
 }
 

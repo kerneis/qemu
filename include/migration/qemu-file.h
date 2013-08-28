@@ -36,7 +36,7 @@ typedef int (QEMUFilePutBufferFunc)(void *opaque, const uint8_t *buf,
  * can be ignored if the file is only be used for streaming.  The number of
  * bytes actually read should be returned.
  */
-typedef int (QEMUFileGetBufferFunc)(void *opaque, uint8_t *buf,
+typedef int coroutine_fn (QEMUFileGetBufferFunc)(void *opaque, uint8_t *buf,
                                     int64_t pos, int size);
 
 /* Close a file

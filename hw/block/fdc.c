@@ -1354,7 +1354,7 @@ static int fdctrl_transfer_handler (void *opaque, int nchan,
         if (fdctrl->data_dir != FD_DIR_WRITE ||
             len < FD_SECTOR_LEN || rel_pos != 0) {
             /* READ & SCAN commands and realign to a sector for WRITE */
-            if (bdrv_read(cur_drv->bs, fd_sector(cur_drv),
+            if (bdrv_sync_read(cur_drv->bs, fd_sector(cur_drv),
                           fdctrl->fifo, 1) < 0) {
                 FLOPPY_DPRINTF("Floppy: error getting sector %d\n",
                                fd_sector(cur_drv));
@@ -1382,7 +1382,7 @@ static int fdctrl_transfer_handler (void *opaque, int nchan,
 
             DMA_read_memory (nchan, fdctrl->fifo + rel_pos,
                              fdctrl->data_pos, len);
-            if (bdrv_write(cur_drv->bs, fd_sector(cur_drv),
+            if (bdrv_sync_write(cur_drv->bs, fd_sector(cur_drv),
                            fdctrl->fifo, 1) < 0) {
                 FLOPPY_DPRINTF("error writing sector %d\n",
                                fd_sector(cur_drv));
@@ -1458,7 +1458,7 @@ static uint32_t fdctrl_read_data(FDCtrl *fdctrl)
                                    fd_sector(cur_drv));
                     return 0;
                 }
-            if (bdrv_read(cur_drv->bs, fd_sector(cur_drv), fdctrl->fifo, 1) < 0) {
+            if (bdrv_sync_read(cur_drv->bs, fd_sector(cur_drv), fdctrl->fifo, 1) < 0) {
                 FLOPPY_DPRINTF("error getting sector %d\n",
                                fd_sector(cur_drv));
                 /* Sure, image size is too small... */
@@ -1528,7 +1528,7 @@ static void fdctrl_format_sector(FDCtrl *fdctrl)
     }
     memset(fdctrl->fifo, 0, FD_SECTOR_LEN);
     if (cur_drv->bs == NULL ||
-        bdrv_write(cur_drv->bs, fd_sector(cur_drv), fdctrl->fifo, 1) < 0) {
+        bdrv_sync_write(cur_drv->bs, fd_sector(cur_drv), fdctrl->fifo, 1) < 0) {
         FLOPPY_DPRINTF("error formatting sector %d\n", fd_sector(cur_drv));
         fdctrl_stop_transfer(fdctrl, FD_SR0_ABNTERM | FD_SR0_SEEK, 0x00, 0x00);
     } else {
@@ -1918,7 +1918,7 @@ static void fdctrl_write_data(FDCtrl *fdctrl, uint32_t value)
         if (pos == FD_SECTOR_LEN - 1 ||
             fdctrl->data_pos == fdctrl->data_len) {
             cur_drv = get_cur_drv(fdctrl);
-            if (bdrv_write(cur_drv->bs, fd_sector(cur_drv), fdctrl->fifo, 1) < 0) {
+            if (bdrv_sync_write(cur_drv->bs, fd_sector(cur_drv), fdctrl->fifo, 1) < 0) {
                 FLOPPY_DPRINTF("error writing sector %d\n",
                                fd_sector(cur_drv));
                 return;

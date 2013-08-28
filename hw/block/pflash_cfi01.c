@@ -234,7 +234,7 @@ static void pflash_update(pflash_t *pfl, int offset,
         /* round to sectors */
         offset = offset >> 9;
         offset_end = (offset_end + 511) >> 9;
-        bdrv_write(pfl->bs, offset, pfl->storage + (offset << 9),
+        bdrv_sync_write(pfl->bs, offset, pfl->storage + (offset << 9),
                    offset_end - offset);
     }
 }
@@ -597,7 +597,7 @@ static void pflash_cfi01_realize(DeviceState *dev, Error **errp)
 
     if (pfl->bs) {
         /* read the initial flash content */
-        ret = bdrv_read(pfl->bs, 0, pfl->storage, total_len >> 9);
+        ret = bdrv_sync_read(pfl->bs, 0, pfl->storage, total_len >> 9);
 
         if (ret < 0) {
             vmstate_unregister_ram(&pfl->mem, DEVICE(pfl));

@@ -65,7 +65,7 @@ static int guess_disk_lchs(BlockDriverState *bs,
      * but also in async I/O mode. So the I/O throttling function has to
      * be disabled temporarily here, not permanently.
      */
-    if (bdrv_read_unthrottled(bs, 0, buf, 1) < 0) {
+    if (bdrv_sync_read_unthrottled(bs, 0, buf, 1) < 0) {
         return -1;
     }
     /* test msdos magic */
