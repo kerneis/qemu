@@ -111,6 +111,38 @@ static int bdrv_snapshot_open(BlockDriverState *bs)
     return so.ret;
 }
 
+
+typedef struct BCCo {
+    BlockDriverState *bs;
+    bool done;
+} BCCo;
+
+
+static void coroutine_fn b_close_co_entry(void *opaque)
+{
+    BCCo *bcco = opaque;
+    BlockDriver *drv = bcco->bs->drv;
+
+    drv->bdrv_close(bcco->bs);
+    bcco->done = true;
+}
+
+static void b_close(BlockDriverState *bs)
+{
+    BCCo bcco = {
+        .bs = bs,
+        .done = false,
+    };
+    Coroutine *co;
+
+    co = qemu_coroutine_create(b_close_co_entry);
+    qemu_coroutine_enter(co, &bcco);
+    while (bcco.done) {
+        qemu_aio_wait();
+    }
+}
+
+
 int bdrv_snapshot_goto(BlockDriverState *bs,
                        const char *snapshot_id)
 {
@@ -125,7 +157,7 @@ int bdrv_snapshot_goto(BlockDriverState *bs,
     }
 
     if (bs->file) {
-        drv->bdrv_close(bs);
+        b_close(bs);
         ret = bdrv_snapshot_goto(bs->file, snapshot_id);
         open_ret = bdrv_snapshot_open(bs);
         if (open_ret < 0) {
