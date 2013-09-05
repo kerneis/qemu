@@ -162,14 +162,14 @@ struct BlockDriver {
     int64_t (*bdrv_get_allocated_file_size)(BlockDriverState *bs);
     int coroutine_fn (*bdrv_write_compressed)(BlockDriverState *bs,
                     int64_t sector_num, const uint8_t *buf, int nb_sectors);
-    int (*bdrv_snapshot_create)(BlockDriverState *bs,
+    int coroutine_fn (*bdrv_snapshot_create)(BlockDriverState *bs,
                                 QEMUSnapshotInfo *sn_info);
-    int (*bdrv_snapshot_goto)(BlockDriverState *bs,
+    int coroutine_fn (*bdrv_snapshot_goto)(BlockDriverState *bs,
                               const char *snapshot_id);
-    int (*bdrv_snapshot_delete)(BlockDriverState *bs, const char *snapshot_id);
-    int (*bdrv_snapshot_list)(BlockDriverState *bs,
+    int coroutine_fn (*bdrv_snapshot_delete)(BlockDriverState *bs, const char *snapshot_id);
+    int coroutine_fn (*bdrv_snapshot_list)(BlockDriverState *bs,
                               QEMUSnapshotInfo **psn_info);
-    int (*bdrv_snapshot_load_tmp)(BlockDriverState *bs,
+    int coroutine_fn (*bdrv_snapshot_load_tmp)(BlockDriverState *bs,
                                   const char *snapshot_name);
     int (*bdrv_get_info)(BlockDriverState *bs, BlockDriverInfo *bdi);
 

@@ -919,6 +919,43 @@ fail:
     return ret;
 }
 
+
+typedef struct OBFCo {
+    BlockDriverState *bs;
+    QDict *options;
+    int ret;
+    bool done;
+} OBFCo;
+
+static void coroutine_fn bdrv_open_backing_file_co_entry(void *opaque)
+{
+    OBFCo *obfco = opaque;
+
+    obfco->ret = bdrv_open_backing_file(obfco->bs, obfco->options);
+    obfco->done = true;
+}
+
+
+int bdrv_sync_open_backing_file(BlockDriverState *bs, QDict *options)
+{
+    OBFCo obfco = {
+        .bs = bs,
+        .options = options,
+        .ret = 0,
+        .done = false,
+    };
+    Coroutine *co;
+
+    co = qemu_coroutine_create(bdrv_open_backing_file_co_entry);
+    qemu_coroutine_enter(co, &obfco);
+    while (!obfco.done) {
+        qemu_aio_wait();
+    }
+
+    return obfco.ret;
+}
+
+
 /*
  * Opens the backing file for a BlockDriverState if not yet open
  *
@@ -1543,6 +1580,34 @@ void coroutine_fn bdrv_close_all(void)
         bdrv_close(bs);
     }
 }
+
+
+typedef struct DACo {
+    bool done;
+} DACo;
+
+static void coroutine_fn bdrv_drain_all_co_entry(void *opaque)
+{
+    DACo *daco = opaque;
+
+    bdrv_drain_all();
+    daco->done = true;
+}
+
+void bdrv_sync_drain_all(void)
+{
+    Coroutine *co;
+    DACo daco = {
+        .done = false,
+    };
+
+    co = qemu_coroutine_create(bdrv_drain_all_co_entry);
+    qemu_coroutine_enter(co, &daco);
+    while (!daco.done) {
+        qemu_aio_wait();
+    }
+}
+
 
 /*
  * Wait for pending requests to complete across all BlockDriverStates
@@ -2418,6 +2483,27 @@ int bdrv_sync_read(BlockDriverState *bs, int64_t sector_num,
     return bdrv_rw_sync(bs, sector_num, buf, nb_sectors, false);
 }
 
+static void coroutine_fn bdrv_read_unthrottled_co_entry(void *opaque)
+{
+    RwCo *rwco = opaque;
+
+    rwco->ret = bdrv_read_unthrottled(rwco->bs, rwco->sector_num, rwco->qiov,
+            rwco->nb_sectors);
+}
+
+int bdrv_sync_read_unthrottled(BlockDriverState *bs, int64_t sector_num,
+                          uint8_t *buf, int nb_sectors)
+{
+    RwCo rwco = {
+        .bs = bs,
+        .sector_num = sector_num,
+        .qiov = buf,
+        .nb_sectors = nb_sectors,
+    };
+
+    return bdrv_sync_rwco(bdrv_read_unthrottled_co_entry, &rwco);
+}
+
 /* Just like bdrv_read(), but with I/O throttling temporarily disabled */
 int coroutine_fn bdrv_read_unthrottled(BlockDriverState *bs, int64_t sector_num,
                           uint8_t *buf, int nb_sectors)
@@ -2978,6 +3064,9 @@ int64_t bdrv_get_allocated_file_size(BlockDriverState *bs)
     return -ENOTSUP;
 }
 
+
+
+
 /**
  * Length of a file in bytes. Return < 0 if error or unknown.
  */
@@ -3182,6 +3271,29 @@ int bdrv_get_flags(BlockDriverState *bs)
 {
     return bs->open_flags;
 }
+
+static void coroutine_fn bdrv_flush_all_co_entry(void *opaque)
+{
+    DACo *daco = opaque;
+
+    bdrv_flush_all();
+    daco->done = true;
+}
+
+void bdrv_sync_flush_all(void)
+{
+    Coroutine *co;
+    DACo daco = {
+        .done = false,
+    };
+
+    co = qemu_coroutine_create(bdrv_flush_all_co_entry);
+    qemu_coroutine_enter(co, &daco);
+    while (!daco.done) {
+        qemu_aio_wait();
+    }
+}
+
 
 int coroutine_fn bdrv_flush_all(void)
 {

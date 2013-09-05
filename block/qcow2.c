@@ -1500,7 +1500,7 @@ static int coroutine_fn qcow2_co_create(const char *filename, QEMUOptionParamete
                          cluster_size, prealloc, options, version);
 }
 
-static int qcow2_make_empty(BlockDriverState *bs)
+static int coroutine_fn qcow2_make_empty(BlockDriverState *bs)
 {
 #if 0
     /* XXX: not correct */
