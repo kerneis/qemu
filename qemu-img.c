@@ -324,7 +324,7 @@ static int add_old_style_options(const char *fmt, QEMUOptionParameter *list,
     return 0;
 }
 
-static int coroutine_fn img_create(int argc, char **argv)
+static int img_create(int argc, char **argv)
 {
     int c;
     uint64_t img_size = -1;
@@ -522,7 +522,7 @@ static int collect_image_check(BlockDriverState *bs,
  * 2 - Check completed, image is corrupted
  * 3 - Check completed, image has leaked clusters, but is good otherwise
  */
-static int coroutine_fn img_check(int argc, char **argv)
+static int img_check(int argc, char **argv)
 {
     int c, ret;
     OutputFormat output_format = OFORMAT_HUMAN;
@@ -657,7 +657,7 @@ fail:
     return ret;
 }
 
-static int coroutine_fn img_commit(int argc, char **argv)
+static int img_commit(int argc, char **argv)
 {
     int c, ret, flags;
     const char *filename, *fmt, *cache;
@@ -854,7 +854,7 @@ static int64_t sectors_to_process(int64_t total, int64_t from)
  * @param buffer: Allocated buffer for storing read data
  * @param quiet: Flag for quiet mode
  */
-static int coroutine_fn check_empty_sectors(BlockDriverState *bs, int64_t sect_num,
+static int check_empty_sectors(BlockDriverState *bs, int64_t sect_num,
                                int sect_count, const char *filename,
                                uint8_t *buffer, bool quiet)
 {
@@ -882,7 +882,7 @@ static int coroutine_fn check_empty_sectors(BlockDriverState *bs, int64_t sect_n
  * 1 - Images differ
  * >1 - Error occurred
  */
-static int coroutine_fn img_compare(int argc, char **argv)
+static int img_compare(int argc, char **argv)
 {
     const char *fmt1 = NULL, *fmt2 = NULL, *filename1, *filename2;
     BlockDriverState *bs1, *bs2;
@@ -1114,7 +1114,7 @@ out3:
     return ret;
 }
 
-static int coroutine_fn img_convert(int argc, char **argv)
+static int img_convert(int argc, char **argv)
 {
     int c, ret = 0, n, n1, bs_n, bs_i, compress, cluster_size, cluster_sectors;
     int progress = 0, flags;
@@ -1704,7 +1704,7 @@ err:
     return NULL;
 }
 
-static int coroutine_fn img_info(int argc, char **argv)
+static int img_info(int argc, char **argv)
 {
     int c;
     OutputFormat output_format = OFORMAT_HUMAN;
@@ -1785,7 +1785,7 @@ static int coroutine_fn img_info(int argc, char **argv)
 #define SNAPSHOT_APPLY  3
 #define SNAPSHOT_DELETE 4
 
-static int coroutine_fn img_snapshot(int argc, char **argv)
+static int img_snapshot(int argc, char **argv)
 {
     BlockDriverState *bs;
     QEMUSnapshotInfo sn;
@@ -1902,7 +1902,7 @@ static int coroutine_fn img_snapshot(int argc, char **argv)
     return 0;
 }
 
-static int coroutine_fn img_rebase(int argc, char **argv)
+static int img_rebase(int argc, char **argv)
 {
     BlockDriverState *bs, *bs_old_backing = NULL, *bs_new_backing = NULL;
     BlockDriver *old_backing_drv, *new_backing_drv;
@@ -2184,7 +2184,7 @@ out:
     return 0;
 }
 
-static int coroutine_fn img_resize(int argc, char **argv)
+static int img_resize(int argc, char **argv)
 {
     int c, ret, relative;
     const char *filename, *fmt, *size;
@@ -2317,38 +2317,6 @@ static const img_cmd_t img_cmds[] = {
     { NULL, NULL, },
 };
 
-struct HandlerCo {
-    int coroutine_fn (*handler)(int, char **);
-    int argc;
-    char **argv;
-    int ret;
-};
-
-
-static void coroutine_fn handler_entry(void *opaque)
-{
-    struct HandlerCo *hco = opaque;
-    hco->ret = hco->handler(hco->argc, hco->argv);
-    hco->handler = NULL;
-}
-
-static int run_handler(int coroutine_fn (*handler)(int, char **), int argc, char **argv)
-{
-    struct HandlerCo hco = {
-        .handler = handler,
-        .argc = argc,
-        .argv = argv,
-    };
-
-    Coroutine *co = qemu_coroutine_create(handler_entry);
-    qemu_coroutine_enter(co, &hco);
-    while (hco.handler) {
-        qemu_aio_wait();
-    }
-
-    return hco.ret;
-}
-
 int main(int argc, char **argv)
 {
     const img_cmd_t *cmd;
@@ -2370,7 +2338,7 @@ int main(int argc, char **argv)
     /* find the command */
     for(cmd = img_cmds; cmd->name != NULL; cmd++) {
         if (!strcmp(cmdname, cmd->name)) {
-            return run_handler(cmd->handler, argc, argv);
+            return cmd->handler(argc, argv);
         }
     }
 
