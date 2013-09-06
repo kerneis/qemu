@@ -213,7 +213,7 @@ static void bdrv_format_print(void *opaque, const char *name)
 static void drive_uninit(DriveInfo *dinfo)
 {
     qemu_opts_del(dinfo->opts);
-    bdrv_delete(dinfo->bdrv);
+    bdrv_sync_delete(dinfo->bdrv);
     g_free(dinfo->id);
     QTAILQ_REMOVE(&drives, dinfo, next);
     g_free(dinfo->serial);
@@ -700,7 +700,7 @@ static DriveInfo *blockdev_init(QemuOpts *all_opts,
     }
 
     QINCREF(bs_opts);
-    ret = bdrv_open(dinfo->bdrv, file, bs_opts, bdrv_flags, NULL);
+    ret = bdrv_sync_open(dinfo->bdrv, file, bs_opts, bdrv_flags, NULL);
 
     if (ret < 0) {
         if (ret == -EMEDIUMTYPE) {
@@ -724,7 +724,7 @@ static DriveInfo *blockdev_init(QemuOpts *all_opts,
 err:
     qemu_opts_del(opts);
     QDECREF(bs_opts);
-    bdrv_delete(dinfo->bdrv);
+    bdrv_sync_delete(dinfo->bdrv);
     g_free(dinfo->id);
     QTAILQ_REMOVE(&drives, dinfo, next);
     g_free(dinfo);
@@ -812,14 +812,14 @@ void do_commit(Monitor *mon, const QDict *qdict)
     int ret;
 
     if (!strcmp(device, "all")) {
-        ret = bdrv_commit_all();
+        ret = bdrv_sync_commit_all();
     } else {
         bs = bdrv_find(device);
         if (!bs) {
             monitor_printf(mon, "Device '%s' not found\n", device);
             return;
         }
-        ret = bdrv_commit(bs);
+        ret = bdrv_sync_commit(bs);
     }
     if (ret < 0) {
         monitor_printf(mon, "'commit' error for '%s': %s\n", device,
@@ -944,7 +944,7 @@ static void external_snapshot_prepare(BlkTransactionState *common,
     }
 
     if (!bdrv_is_read_only(state->old_bs)) {
-        if (bdrv_flush(state->old_bs)) {
+        if (bdrv_sync_flush(state->old_bs)) {
             error_set(errp, QERR_IO_ERROR);
             return;
         }
@@ -954,7 +954,7 @@ static void external_snapshot_prepare(BlkTransactionState *common,
 
     /* create new image w/backing file */
     if (mode != NEW_IMAGE_MODE_EXISTING) {
-        bdrv_img_create(new_image_file, format,
+        bdrv_sync_img_create(new_image_file, format,
                         state->old_bs->filename,
                         state->old_bs->drv->format_name,
                         NULL, -1, flags, &local_err, false);
@@ -968,7 +968,7 @@ static void external_snapshot_prepare(BlkTransactionState *common,
     state->new_bs = bdrv_new("");
     /* TODO Inherit bs->options or only take explicit options with an
      * extended QMP command? */
-    ret = bdrv_open(state->new_bs, new_image_file, NULL,
+    ret = bdrv_sync_open(state->new_bs, new_image_file, NULL,
                     flags | BDRV_O_NO_BACKING, drv);
     if (ret != 0) {
         error_setg_file_open(errp, -ret, new_image_file);
@@ -994,7 +994,7 @@ static void external_snapshot_abort(BlkTransactionState *common)
     ExternalSnapshotState *state =
                              DO_UPCAST(ExternalSnapshotState, common, common);
     if (state->new_bs) {
-        bdrv_delete(state->new_bs);
+        bdrv_sync_delete(state->new_bs);
     }
 }
 
@@ -1160,7 +1160,7 @@ static void eject_device(BlockDriverState *bs, int force, Error **errp)
         }
     }
 
-    bdrv_close(bs);
+    bdrv_sync_close(bs);
 }
 
 void qmp_eject(const char *device, bool has_force, bool force, Error **errp)
@@ -1203,7 +1203,7 @@ static void qmp_bdrv_open_encrypted(BlockDriverState *bs, const char *filename,
 {
     int ret;
 
-    ret = bdrv_open(bs, filename, NULL, bdrv_flags, drv);
+    ret = bdrv_sync_open(bs, filename, NULL, bdrv_flags, drv);
     if (ret < 0) {
         error_setg_file_open(errp, -ret, filename);
         return;
@@ -1311,9 +1311,9 @@ int do_drive_del(Monitor *mon, const QDict *qdict, QObject **ret_data)
     }
 
     /* quiesce block driver; prevent further io */
-    bdrv_drain_all();
-    bdrv_flush(bs);
-    bdrv_close(bs);
+    bdrv_sync_drain_all();
+    bdrv_sync_flush(bs);
+    bdrv_sync_close(bs);
 
     /* if we have a device attached to this BlockDriverState
      * then we need to make the drive anonymous until the device
@@ -1350,9 +1350,9 @@ void qmp_block_resize(const char *device, int64_t size, Error **errp)
     }
 
     /* complete all in-flight operations before resizing the device */
-    bdrv_drain_all();
+    bdrv_sync_drain_all();
 
-    ret = bdrv_truncate(bs, size);
+    ret = bdrv_sync_truncate(bs, size);
     switch (ret) {
     case 0:
         break;
@@ -1580,11 +1580,11 @@ void qmp_drive_backup(const char *device, const char *target,
     if (mode != NEW_IMAGE_MODE_EXISTING) {
         assert(format && drv);
         if (source) {
-            bdrv_img_create(target, format, source->filename,
+            bdrv_sync_img_create(target, format, source->filename,
                             source->drv->format_name, NULL,
                             size, flags, &local_err, false);
         } else {
-            bdrv_img_create(target, format, NULL, NULL, NULL,
+            bdrv_sync_img_create(target, format, NULL, NULL, NULL,
                             size, flags, &local_err, false);
         }
     }
@@ -1595,9 +1595,9 @@ void qmp_drive_backup(const char *device, const char *target,
     }
 
     target_bs = bdrv_new("");
-    ret = bdrv_open(target_bs, target, NULL, flags, drv);
+    ret = bdrv_sync_open(target_bs, target, NULL, flags, drv);
     if (ret < 0) {
-        bdrv_delete(target_bs);
+        bdrv_sync_delete(target_bs);
         error_setg_file_open(errp, -ret, target);
         return;
     }
@@ -1605,7 +1605,7 @@ void qmp_drive_backup(const char *device, const char *target,
     backup_start(bs, target_bs, speed, sync, on_source_error, on_target_error,
                  block_job_cb, bs, &local_err);
     if (local_err != NULL) {
-        bdrv_delete(target_bs);
+        bdrv_sync_delete(target_bs);
         error_propagate(errp, local_err);
         return;
     }
@@ -1707,7 +1707,7 @@ void qmp_drive_mirror(const char *device, const char *target,
     if (sync == MIRROR_SYNC_MODE_FULL && mode != NEW_IMAGE_MODE_EXISTING) {
         /* create new image w/o backing file */
         assert(format && drv);
-        bdrv_img_create(target, format,
+        bdrv_sync_img_create(target, format,
                         NULL, NULL, NULL, size, flags, &local_err, false);
     } else {
         switch (mode) {
@@ -1716,7 +1716,7 @@ void qmp_drive_mirror(const char *device, const char *target,
             break;
         case NEW_IMAGE_MODE_ABSOLUTE_PATHS:
             /* create new image with backing file */
-            bdrv_img_create(target, format,
+            bdrv_sync_img_create(target, format,
                             source->filename,
                             source->drv->format_name,
                             NULL, size, flags, &local_err, false);
@@ -1735,9 +1735,9 @@ void qmp_drive_mirror(const char *device, const char *target,
      * file.
      */
     target_bs = bdrv_new("");
-    ret = bdrv_open(target_bs, target, NULL, flags | BDRV_O_NO_BACKING, drv);
+    ret = bdrv_sync_open(target_bs, target, NULL, flags | BDRV_O_NO_BACKING, drv);
     if (ret < 0) {
-        bdrv_delete(target_bs);
+        bdrv_sync_delete(target_bs);
         error_setg_file_open(errp, -ret, target);
         return;
     }
@@ -1746,7 +1746,7 @@ void qmp_drive_mirror(const char *device, const char *target,
                  on_source_error, on_target_error,
                  block_job_cb, bs, &local_err);
     if (local_err != NULL) {
-        bdrv_delete(target_bs);
+        bdrv_sync_delete(target_bs);
         error_propagate(errp, local_err);
         return;
     }

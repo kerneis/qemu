@@ -675,7 +675,12 @@ size_t ram_control_save_page(QEMUFile *f, ram_addr_t block_offset,
     return RAM_SAVE_CONTROL_NOT_SUPP;
 }
 
-static void qemu_fill_buffer(QEMUFile *f)
+typedef struct FBCo {
+    QEMUFile *f;
+    bool done;
+} FBCo;
+
+static void coroutine_fn qemu_co_fill_buffer(QEMUFile *f)
 {
     int len;
     int pending;
@@ -698,6 +703,29 @@ static void qemu_fill_buffer(QEMUFile *f)
         qemu_file_set_error(f, -EIO);
     } else if (len != -EAGAIN)
         qemu_file_set_error(f, len);
+}
+
+static void coroutine_fn qemu_fill_buffer_co_entry(void *opaque)
+{
+    FBCo *fbco = opaque;
+
+    qemu_co_fill_buffer(fbco->f);
+    fbco->done = true;
+}
+
+static void qemu_fill_buffer(QEMUFile *f)
+{
+    FBCo fbco = {
+        .f = f,
+        .done = false,
+    };
+    Coroutine *co;
+
+    co = qemu_coroutine_create(qemu_fill_buffer_co_entry);
+    qemu_coroutine_enter(co, &fbco);
+    while (!fbco.done) {
+        qemu_aio_wait();
+    }
 }
 
 int qemu_get_fd(QEMUFile *f)

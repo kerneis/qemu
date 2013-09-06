@@ -458,7 +458,7 @@ static int mig_save_device_dirty(QEMUFile *f, BlkMigDevState *bmds,
                 bmds_set_aio_inflight(bmds, sector, nr_sectors, 1);
                 blk_mig_unlock();
             } else {
-                ret = bdrv_read(bmds->bs, sector, blk->buf, nr_sectors);
+                ret = bdrv_sync_read(bmds->bs, sector, blk->buf, nr_sectors);
                 if (ret < 0) {
                     goto error;
                 }
@@ -780,11 +780,11 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
             }
 
             if (flags & BLK_MIG_FLAG_ZERO_BLOCK) {
-                ret = bdrv_write_zeroes(bs, addr, nr_sectors);
+                ret = bdrv_sync_write_zeroes(bs, addr, nr_sectors);
             } else {
                 buf = g_malloc(BLOCK_SIZE);
                 qemu_get_buffer(f, buf, BLOCK_SIZE);
-                ret = bdrv_write(bs, addr, buf, nr_sectors);
+                ret = bdrv_sync_write(bs, addr, buf, nr_sectors);
                 g_free(buf);
             }
 

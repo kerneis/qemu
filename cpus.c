@@ -1129,7 +1129,7 @@ int vm_stop_force_state(RunState state)
         runstate_set(state);
         /* Make sure to return an error if the flush in a previous vm_stop()
          * failed. */
-        return bdrv_flush_all();
+        return bdrv_sync_flush_all();
     }
 }
 

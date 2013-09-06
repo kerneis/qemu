@@ -1970,6 +1970,46 @@ int bdrv_check(BlockDriverState *bs, BdrvCheckResult *res, BdrvCheckMode fix)
 
 #define COMMIT_BUF_SECTORS 2048
 
+typedef struct RwCo {
+    BlockDriverState *bs;
+    int64_t sector_num;
+    int nb_sectors;
+    QEMUIOVector *qiov;
+    bool is_write;
+    int ret;
+    BdrvRequestFlags flags;
+} RwCo;
+
+static int bdrv_sync_rwco(void coroutine_fn (*co_fn)(void *), RwCo *rwco)
+{
+    Coroutine *co;
+    co = qemu_coroutine_create(co_fn);
+    rwco->ret = NOT_DONE;
+    qemu_coroutine_enter(co, rwco);
+    while (rwco->ret == NOT_DONE) {
+        qemu_aio_wait();
+    }
+    return rwco->ret;
+}
+
+static void coroutine_fn bdrv_commit_co_entry(void *opaque)
+{
+    RwCo *rwco = opaque;
+
+    rwco->ret = bdrv_commit(rwco->bs);
+}
+
+int bdrv_sync_commit(BlockDriverState *bs)
+{
+    RwCo rwco = {
+        .bs = bs,
+    };
+
+    return bdrv_sync_rwco(bdrv_commit_co_entry, &rwco);
+}
+
+
+
 /* commit COW file into the raw image */
 int coroutine_fn bdrv_commit(BlockDriverState *bs)
 {
@@ -2041,6 +2081,35 @@ ro_cleanup:
     }
 
     return ret;
+}
+
+typedef struct CACo {
+    int ret;
+    bool done;
+} CACo;
+
+
+static void coroutine_fn bdrv_commit_all_co_entry(void *opaque)
+{
+    CACo *caco = opaque;
+
+    caco->ret = bdrv_commit_all();
+    caco->done = true;
+}
+
+int bdrv_sync_commit_all(void)
+{
+    CACo caco = {
+        .done = false,
+    };
+
+    Coroutine *co;
+    co = qemu_coroutine_create(bdrv_commit_all_co_entry);
+    qemu_coroutine_enter(co, &caco);
+    while (!caco.done) {
+        qemu_aio_wait();
+    }
+    return caco.ret;
 }
 
 int coroutine_fn bdrv_commit_all(void)
@@ -2365,27 +2434,7 @@ static int bdrv_check_request(BlockDriverState *bs, int64_t sector_num,
                                    nb_sectors * BDRV_SECTOR_SIZE);
 }
 
-typedef struct RwCo {
-    BlockDriverState *bs;
-    int64_t sector_num;
-    int nb_sectors;
-    QEMUIOVector *qiov;
-    bool is_write;
-    int ret;
-    BdrvRequestFlags flags;
-} RwCo;
 
-static int bdrv_sync_rwco(void coroutine_fn (*co_fn)(void *), RwCo *rwco)
-{
-    Coroutine *co;
-    co = qemu_coroutine_create(co_fn);
-    rwco->ret = NOT_DONE;
-    qemu_coroutine_enter(co, rwco);
-    while (rwco->ret == NOT_DONE) {
-        qemu_aio_wait();
-    }
-    return rwco->ret;
-}
 
 /*
  * Process a vectored synchronous request using coroutines
@@ -2528,6 +2577,20 @@ int bdrv_sync_write(BlockDriverState *bs, int64_t sector_num,
                const uint8_t *buf, int nb_sectors)
 {
     return bdrv_rw_sync(bs, sector_num, (uint8_t *)buf, nb_sectors, true);
+}
+
+int bdrv_sync_write_zeroes(BlockDriverState *bs, int64_t sector_num,
+                                   int nb_sectors)
+{
+    QEMUIOVector qiov;
+    struct iovec iov = {
+        .iov_base = NULL,
+        .iov_len = nb_sectors * BDRV_SECTOR_SIZE,
+    };
+
+    qemu_iovec_init_external(&qiov, &iov, 1);
+    return bdrv_rwv_sync(bs, sector_num, &qiov, true,
+                      BDRV_REQ_ZERO_WRITE);
 }
 
 int coroutine_fn bdrv_write(BlockDriverState *bs, int64_t sector_num,
@@ -4804,6 +4867,56 @@ bdrv_acct_done(BlockDriverState *bs, BlockAcctCookie *cookie)
     bs->nr_bytes[cookie->type] += cookie->bytes;
     bs->nr_ops[cookie->type]++;
     bs->total_time_ns[cookie->type] += get_clock() - cookie->start_time_ns;
+}
+
+typedef struct ICCo {
+    const char *filename;
+    const char *fmt;
+    const char *base_filename;
+    const char *base_fmt;
+    char *options;
+    uint64_t img_size;
+    int flags;
+    Error **errp;
+    bool quiet;
+    bool done;
+} ICCo;
+
+void coroutine_fn bdrv_img_create_co_entry(void *opaque)
+{
+    ICCo *icco = opaque;
+
+    bdrv_img_create(icco->filename, icco->fmt,
+                     icco->base_filename, icco->base_fmt,
+                     icco->options, icco->img_size, icco->flags,
+                     icco->errp, icco->quiet);
+    icco->done = true;
+}
+
+void coroutine_fn bdrv_sync_img_create(const char *filename, const char *fmt,
+                     const char *base_filename, const char *base_fmt,
+                     char *options, uint64_t img_size, int flags,
+                     Error **errp, bool quiet)
+{
+    ICCo icco = {
+        .filename = filename,
+        .fmt = fmt,
+        .base_filename = base_filename,
+        .base_fmt = base_fmt,
+        .options = options,
+        .img_size = img_size,
+        .flags = flags,
+        .errp = errp,
+        .quiet = quiet,
+        .done = false,
+    };
+    Coroutine *co;
+
+    co = qemu_coroutine_create(bdrv_img_create_co_entry);
+    qemu_coroutine_enter(co, &icco);
+    while (!icco.done) {
+        qemu_aio_wait();
+    }
 }
 
 void coroutine_fn bdrv_img_create(const char *filename, const char *fmt,

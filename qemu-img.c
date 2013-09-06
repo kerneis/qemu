@@ -255,7 +255,7 @@ static int print_block_option_help(const char *filename, const char *fmt)
     return 0;
 }
 
-static coroutine_fn BlockDriverState *bdrv_new_open(const char *filename,
+static BlockDriverState *bdrv_new_open(const char *filename,
                                        const char *fmt,
                                        int flags,
                                        bool require_io,
@@ -278,7 +278,7 @@ static coroutine_fn BlockDriverState *bdrv_new_open(const char *filename,
         drv = NULL;
     }
 
-    ret = bdrv_open(bs, filename, NULL, flags, drv);
+    ret = bdrv_sync_open(bs, filename, NULL, flags, drv);
     if (ret < 0) {
         error_report("Could not open '%s': %s", filename, strerror(-ret));
         goto fail;
@@ -298,7 +298,7 @@ static coroutine_fn BlockDriverState *bdrv_new_open(const char *filename,
     return bs;
 fail:
     if (bs) {
-        bdrv_delete(bs);
+        bdrv_sync_delete(bs);
     }
     return NULL;
 }
@@ -652,7 +652,7 @@ static int img_check(int argc, char **argv)
 
 fail:
     qapi_free_ImageCheck(check);
-    bdrv_delete(bs);
+    bdrv_sync_delete(bs);
 
     return ret;
 }
