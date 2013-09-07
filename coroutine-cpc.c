@@ -100,9 +100,7 @@ cpc_invoke_continuation(struct cpc_continuation *c)
     cpc_function *f = NULL;
     const cpc_function *yield_func = qemu_coroutine_yield;
 
-    /* If the last function was a yield, return from the invocation when that
-     * function is done. */
-    while (f != yield_func) {
+    while (1) {
         /* If the continuation is empty, free it and return NULL, signalling
          * this continuation terminated. */
         if (c->length == 0) {
@@ -110,11 +108,17 @@ cpc_invoke_continuation(struct cpc_continuation *c)
             return NULL;
         }
 
+        /* Extract the next function from the continuation. */
         c->length -= PTR_SIZE;
         f = *(cpc_function **)(c->c + c->length);
+
+        /* If we need to yield, return immediately.  This hack is necessary to
+         * avoid modifying the implementation of qemu_coroutine_yield.  */
+        if (f == yield_func) {
+            return c;
+        }
         c = (*f)(c);
     }
-    return c;
 }
 
 static void qemu_coroutine_thread_cleanup(void *opaque)
@@ -176,9 +180,10 @@ CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
 
     CoroutineThreadState *s = coroutine_get_thread_state();
 
-    s->current = to_;
+    assert(to_->caller);
+    assert(action == COROUTINE_YIELD);
 
-    /* if we switch to leader, quit */
+    s->current = to_;
 
     if (!to->cont) {
 #define INITIAL_SIZE 512
@@ -188,18 +193,16 @@ CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
         to->cont = cpc_continuation_push(to->cont, to_->entry);
     }
 
-    if (to != &s->leader) {
-        to->cont = cpc_invoke_continuation(to->cont);
-    }
+    to->cont = cpc_invoke_continuation(to->cont);
+
+    s->current = to_->caller;
 
     if (!to->cont) {
-        /* if we terminate, switch back to caller or leader? */
-        s->current = to_->caller;
-        if (!to_->caller) {
-            s->current = &s->leader.base;
-        }
         return COROUTINE_TERMINATE;
     } else {
+        /* Fix the caller. This is normally done in qemu_coroutine_yield
+         * but we bypass it for CPC. */
+        to_->caller = NULL;
         return COROUTINE_YIELD;
     }
 }
