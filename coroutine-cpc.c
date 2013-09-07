@@ -70,7 +70,7 @@ static struct cpc_continuation *cont_alloc(unsigned size)
 
 static void cpc_continuation_free(struct cpc_continuation *c)
 {
-    free(c);
+    g_free(c);
 }
 
 cpc_continuation *
