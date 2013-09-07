@@ -170,7 +170,7 @@ void qemu_coroutine_delete(Coroutine *co_)
 }
 
 struct arglist {
-   void *arg  __attribute__((__aligned__(16))) ;
+   void *arg  __attribute__((__aligned__)) ;
 };
 
 CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
