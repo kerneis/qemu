@@ -68,9 +68,9 @@ void qemu_co_queue_run_restart(Coroutine *co)
     }
 }
 
-static bool qemu_co_queue_do_restart(CoQueue *queue, bool single)
+static bool coroutine_fn qemu_co_queue_do_restart(CoQueue *queue, bool single)
 {
-    Coroutine *self = qemu_coroutine_self_int();
+    Coroutine *self = qemu_coroutine_self();
     Coroutine *next;
 
     if (QTAILQ_EMPTY(&queue->entries)) {
@@ -88,12 +88,12 @@ static bool qemu_co_queue_do_restart(CoQueue *queue, bool single)
     return true;
 }
 
-bool qemu_co_queue_next(CoQueue *queue)
+bool coroutine_fn qemu_co_queue_next(CoQueue *queue)
 {
     return qemu_co_queue_do_restart(queue, true);
 }
 
-void qemu_co_queue_restart_all(CoQueue *queue)
+void coroutine_fn qemu_co_queue_restart_all(CoQueue *queue)
 {
     qemu_co_queue_do_restart(queue, false);
 }
@@ -167,7 +167,7 @@ void coroutine_fn qemu_co_rwlock_rdlock(CoRwlock *lock)
     lock->reader++;
 }
 
-void qemu_co_rwlock_unlock(CoRwlock *lock)
+void coroutine_fn qemu_co_rwlock_unlock(CoRwlock *lock)
 {
     assert(qemu_in_coroutine());
     if (lock->writer) {

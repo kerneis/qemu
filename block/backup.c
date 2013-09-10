@@ -78,7 +78,7 @@ static void cow_request_begin(CowRequest *req, BackupBlockJob *job,
 }
 
 /* Forget about a completed request */
-static void cow_request_end(CowRequest *req)
+static void coroutine_fn cow_request_end(CowRequest *req)
 {
     QLIST_REMOVE(req, list);
     qemu_co_queue_restart_all(&req->wait_queue);
