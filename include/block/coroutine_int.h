@@ -48,7 +48,9 @@ Coroutine *qemu_coroutine_new(void);
 void qemu_coroutine_delete(Coroutine *co);
 CoroutineAction qemu_coroutine_switch(Coroutine *from, Coroutine *to,
                                       CoroutineAction action);
-Coroutine *qemu_coroutine_self_int(void);
+#ifndef QEMU_COROUTINE_CPC
+Coroutine *qemu_coroutine_self_int(void) __attribute__((cpc_need_cont));
+#endif
 void qemu_co_queue_run_restart(Coroutine *co);
 
 #endif

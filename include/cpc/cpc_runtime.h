@@ -63,9 +63,12 @@ typedef struct cpc_sched cpc_sched;
 extern cpc_sched *cpc_default_threadpool;
 #define cpc_default_sched NULL
 
+typedef struct Coroutine Coroutine;
+
 typedef struct cpc_continuation {
     unsigned short length;
     unsigned short size;
+    Coroutine *coroutine;
 #ifdef CPC_INDIRECT_PATCH
     void *cpc_retval; // where to write the next return value
 #endif

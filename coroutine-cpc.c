@@ -34,6 +34,7 @@ THE SOFTWARE.
 #include <fcntl.h>
 #include <stddef.h>
 
+#define QEMU_COROUTINE_CPC
 #include "cpc/cpc_runtime.h"
 #include "block/coroutine_int.h"
 
@@ -43,19 +44,6 @@ typedef struct {
     Coroutine base;
     struct cpc_continuation *cont;
 } CoroutineCPC;
-
-/**
- * Per-thread coroutine bookkeeping
- */
-typedef struct {
-    /** Currently executing coroutine */
-    Coroutine *current;
-
-    /** The default coroutine */
-    CoroutineCPC leader;
-} CoroutineThreadState;
-
-static pthread_key_t thread_state_key;
 
 static struct cpc_continuation *cont_alloc(unsigned size)
 {
@@ -88,6 +76,7 @@ cpc_continuation_expand(struct cpc_continuation *c, int n)
 
     memcpy(r->c, c->c, c->length);
     r->length = c->length;
+    r->coroutine = c->coroutine;
     cpc_continuation_free(c);
 
     return r;
@@ -121,36 +110,6 @@ cpc_invoke_continuation(struct cpc_continuation *c)
     }
 }
 
-static void qemu_coroutine_thread_cleanup(void *opaque)
-{
-    CoroutineThreadState *s = opaque;
-
-    g_free(s);
-}
-
-static void __attribute__((constructor)) coroutine_init(void)
-{
-    int ret;
-
-    ret = pthread_key_create(&thread_state_key, qemu_coroutine_thread_cleanup);
-    if (ret != 0) {
-        fprintf(stderr, "unable to create leader key: %s\n", strerror(errno));
-        abort();
-    }
-}
-
-static CoroutineThreadState *coroutine_get_thread_state(void)
-{
-    CoroutineThreadState *s = pthread_getspecific(thread_state_key);
-
-    if (!s) {
-        s = g_malloc0(sizeof(*s));
-        s->current = &s->leader.base;
-        pthread_setspecific(thread_state_key, s);
-    }
-    return s;
-}
-
 Coroutine *qemu_coroutine_new(void)
 {
     CoroutineCPC *co;
@@ -178,13 +137,6 @@ CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
 {
     CoroutineCPC *to = DO_UPCAST(CoroutineCPC, base, to_);
 
-    CoroutineThreadState *s = coroutine_get_thread_state();
-
-    assert(to_->caller);
-    assert(action == COROUTINE_YIELD);
-
-    s->current = to_;
-
     if (!to->cont) {
 #define INITIAL_SIZE 512
         to->cont = cpc_continuation_expand(NULL, INITIAL_SIZE);
@@ -193,30 +145,27 @@ CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
         to->cont = cpc_continuation_push(to->cont, to_->entry);
     }
 
-    to->cont = cpc_invoke_continuation(to->cont);
+    to->cont->coroutine = to_;
 
-    s->current = to_->caller;
+    to->cont = cpc_invoke_continuation(to->cont);
 
     if (!to->cont) {
         return COROUTINE_TERMINATE;
     } else {
         /* Fix the caller. This is normally done in qemu_coroutine_yield
          * but we bypass it for CPC. */
+        to->cont->coroutine = to_->caller;
         to_->caller = NULL;
         return COROUTINE_YIELD;
     }
 }
 
-Coroutine *qemu_coroutine_self_int(void)
+Coroutine *qemu_coroutine_self_int(cpc_continuation *c)
 {
-    CoroutineThreadState *s = coroutine_get_thread_state();
-
-    return s->current;
+    return c->coroutine;
 }
 
-bool qemu_in_coroutine(void)
+Coroutine *qemu_in_coroutine(cpc_continuation *c)
 {
-    CoroutineThreadState *s = pthread_getspecific(thread_state_key);
-
-    return s && s->current->caller;
+    return (c != NULL);
 }

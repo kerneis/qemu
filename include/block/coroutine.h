@@ -103,7 +103,9 @@ Coroutine *coroutine_fn qemu_coroutine_self(void);
  * and when not in coroutine context.  Note that such functions cannot use the
  * coroutine_fn annotation since they work outside coroutine context.
  */
-bool qemu_in_coroutine(void);
+#ifndef QEMU_COROUTINE_CPC
+bool qemu_in_coroutine(void) __attribute__((cpc_need_cont));
+#endif
 
 
 
