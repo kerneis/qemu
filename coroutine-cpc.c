@@ -162,7 +162,7 @@ CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
 
 Coroutine *qemu_coroutine_self_int(cpc_continuation *c)
 {
-    return c->coroutine;
+    return (c ? c->coroutine : NULL);
 }
 
 Coroutine *qemu_in_coroutine(cpc_continuation *c)

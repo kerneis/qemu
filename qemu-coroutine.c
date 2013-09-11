@@ -114,7 +114,6 @@ static void coroutine_swap(Coroutine *from, Coroutine *to)
 
 void qemu_coroutine_enter(Coroutine *co, void *opaque)
 {
-  /*
     Coroutine *self = qemu_coroutine_self_int();
 
     trace_qemu_coroutine_enter(self, co, opaque);
@@ -125,10 +124,8 @@ void qemu_coroutine_enter(Coroutine *co, void *opaque)
     }
 
     co->caller = self;
-  */
-    co->caller = NULL;
     co->entry_arg = opaque;
-    coroutine_swap(NULL, co);
+    coroutine_swap(self, co);
 }
 
 void coroutine_fn qemu_coroutine_yield(void)
