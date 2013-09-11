@@ -18,7 +18,6 @@
 #include "block/coroutine.h"
 #include "block/coroutine_int.h"
 
-#ifndef NO_COROUTINE_POOL
 enum {
     /* Maximum free pool size prevents holding too many freed coroutines */
     POOL_MAX_SIZE = 64,
@@ -28,13 +27,11 @@ enum {
 static QemuMutex pool_lock;
 static QSLIST_HEAD(, Coroutine) pool = QSLIST_HEAD_INITIALIZER(pool);
 static unsigned int pool_size;
-#endif
 
 Coroutine *qemu_coroutine_create(CoroutineEntry *entry)
 {
     Coroutine *co;
 
-#ifndef NO_COROUTINE_POOL
     qemu_mutex_lock(&pool_lock);
     co = QSLIST_FIRST(&pool);
     if (co) {
@@ -46,9 +43,6 @@ Coroutine *qemu_coroutine_create(CoroutineEntry *entry)
     if (!co) {
         co = qemu_coroutine_new();
     }
-#else
-    co = qemu_coroutine_new();
-#endif
 
     co->entry = entry;
     QTAILQ_INIT(&co->co_queue_wakeup);
@@ -57,7 +51,6 @@ Coroutine *qemu_coroutine_create(CoroutineEntry *entry)
 
 static void coroutine_delete(Coroutine *co)
 {
-#ifndef NO_COROUTINE_POOL
     qemu_mutex_lock(&pool_lock);
     if (pool_size < POOL_MAX_SIZE) {
         QSLIST_INSERT_HEAD(&pool, co, pool_next);
@@ -67,12 +60,10 @@ static void coroutine_delete(Coroutine *co)
         return;
     }
     qemu_mutex_unlock(&pool_lock);
-#endif
 
     qemu_coroutine_delete(co);
 }
 
-#ifndef NO_COROUTINE_POOL
 static void __attribute__((constructor)) coroutine_pool_init(void)
 {
     qemu_mutex_init(&pool_lock);
@@ -90,7 +81,6 @@ static void __attribute__((destructor)) coroutine_pool_cleanup(void)
 
     qemu_mutex_destroy(&pool_lock);
 }
-#endif
 
 static void coroutine_swap(Coroutine *from, Coroutine *to)
 {
