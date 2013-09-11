@@ -127,14 +127,6 @@ ssize_t nbd_wr_sync(int fd, void *buffer, size_t size, bool do_read)
     size_t offset = 0;
     int err;
 
-    if (qemu_in_coroutine()) {
-        if (do_read) {
-            return qemu_co_recv(fd, buffer, size);
-        } else {
-            return qemu_co_send(fd, buffer, size);
-        }
-    }
-
     while (offset < size) {
         ssize_t len;
 
@@ -177,12 +169,32 @@ static ssize_t read_sync(int fd, void *buffer, size_t size)
     return nbd_wr_sync(fd, buffer, size, true);
 }
 
+static ssize_t coroutine_fn read_co(int fd, void *buffer, size_t size)
+{
+    /* Sockets are kept in blocking mode in the negotiation phase.  After
+     * that, a non-readable socket simply means that another thread stole
+     * our request/reply.  Synchronization is done with recv_coroutine, so
+     * that this is coroutine-safe.
+     */
+    return qemu_co_recv(fd, buffer, size);
+}
+
 static ssize_t write_sync(int fd, void *buffer, size_t size)
 {
     int ret;
     do {
         /* For writes, we do expect the socket to be writable.  */
         ret = nbd_wr_sync(fd, buffer, size, false);
+    } while (ret == -EAGAIN);
+    return ret;
+}
+
+static ssize_t coroutine_fn write_co(int fd, void *buffer, size_t size)
+{
+    int ret;
+    do {
+        /* For writes, we do expect the socket to be writable.  */
+        ret = qemu_co_send(fd, buffer, size);
     } while (ret == -EAGAIN);
     return ret;
 }
@@ -690,6 +702,47 @@ ssize_t nbd_send_request(int csock, struct nbd_request *request)
     return 0;
 }
 
+static ssize_t coroutine_fn nbd_co_do_receive_request(int csock, struct nbd_request *request)
+{
+    uint8_t buf[NBD_REQUEST_SIZE];
+    uint32_t magic;
+    ssize_t ret;
+
+    ret = read_co(csock, buf, sizeof(buf));
+    if (ret < 0) {
+        return ret;
+    }
+
+    if (ret != sizeof(buf)) {
+        LOG("read failed");
+        return -EINVAL;
+    }
+
+    /* Request
+       [ 0 ..  3]   magic   (NBD_REQUEST_MAGIC)
+       [ 4 ..  7]   type    (0 == READ, 1 == WRITE)
+       [ 8 .. 15]   handle
+       [16 .. 23]   from
+       [24 .. 27]   len
+     */
+
+    magic = be32_to_cpup((uint32_t*)buf);
+    request->type  = be32_to_cpup((uint32_t*)(buf + 4));
+    request->handle = be64_to_cpup((uint64_t*)(buf + 8));
+    request->from  = be64_to_cpup((uint64_t*)(buf + 16));
+    request->len   = be32_to_cpup((uint32_t*)(buf + 24));
+
+    TRACE("Got request: "
+          "{ magic = 0x%x, .type = %d, from = %" PRIu64" , len = %u }",
+          magic, request->type, request->from, request->len);
+
+    if (magic != NBD_REQUEST_MAGIC) {
+        LOG("invalid magic (got 0x%x)", magic);
+        return -EINVAL;
+    }
+    return 0;
+}
+
 static ssize_t nbd_receive_request(int csock, struct nbd_request *request)
 {
     uint8_t buf[NBD_REQUEST_SIZE];
@@ -763,6 +816,34 @@ ssize_t nbd_receive_reply(int csock, struct nbd_reply *reply)
 
     if (magic != NBD_REPLY_MAGIC) {
         LOG("invalid magic (got 0x%x)", magic);
+        return -EINVAL;
+    }
+    return 0;
+}
+
+static ssize_t coroutine_fn nbd_co_do_send_reply(int csock, struct nbd_reply *reply)
+{
+    uint8_t buf[NBD_REPLY_SIZE];
+    ssize_t ret;
+
+    /* Reply
+       [ 0 ..  3]    magic   (NBD_REPLY_MAGIC)
+       [ 4 ..  7]    error   (0 == no error)
+       [ 7 .. 15]    handle
+     */
+    cpu_to_be32w((uint32_t*)buf, NBD_REPLY_MAGIC);
+    cpu_to_be32w((uint32_t*)(buf + 4), reply->error);
+    cpu_to_be64w((uint64_t*)(buf + 8), reply->handle);
+
+    TRACE("Sending response to client");
+
+    ret = write_co(csock, buf, sizeof(buf));
+    if (ret < 0) {
+        return ret;
+    }
+
+    if (ret != sizeof(buf)) {
+        LOG("writing to socket failed");
         return -EINVAL;
     }
     return 0;
@@ -987,7 +1068,7 @@ static ssize_t coroutine_fn nbd_co_send_reply(NBDRequest *req, struct nbd_reply 
         rc = nbd_send_reply(csock, reply);
     } else {
         socket_set_cork(csock, 1);
-        rc = nbd_send_reply(csock, reply);
+        rc = nbd_co_do_send_reply(csock, reply);
         if (rc >= 0) {
             ret = qemu_co_send(csock, req->data, len);
             if (ret != len) {
@@ -1011,7 +1092,7 @@ static ssize_t coroutine_fn nbd_co_receive_request(NBDRequest *req, struct nbd_r
     ssize_t rc;
 
     client->recv_coroutine = qemu_coroutine_self();
-    rc = nbd_receive_request(csock, request);
+    rc = nbd_co_do_receive_request(csock, request);
     if (rc < 0) {
         if (rc != -EAGAIN) {
             rc = -EIO;
