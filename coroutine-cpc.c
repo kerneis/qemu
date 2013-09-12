@@ -165,7 +165,7 @@ Coroutine *qemu_coroutine_self_int(cpc_continuation *c)
     return (c ? c->coroutine : NULL);
 }
 
-Coroutine *qemu_in_coroutine(cpc_continuation *c)
+bool qemu_in_coroutine(cpc_continuation *c)
 {
     return (c != NULL);
 }
