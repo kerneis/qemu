@@ -51,8 +51,9 @@ static struct cpc_continuation *cont_alloc(unsigned size)
     if (size < 16) {
         size = 16;
     }
-    r = g_malloc0(sizeof(*r) + size - 1);
+    r = g_malloc(sizeof(*r) + size - 1);
     r->size = size - 1;
+    r->length = 0;
     return r;
 }
 
@@ -138,8 +139,6 @@ CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
     CoroutineCPC *to = DO_UPCAST(CoroutineCPC, base, to_);
 
     if (!to->cont) {
-#define INITIAL_SIZE 512
-        to->cont = cpc_continuation_expand(NULL, INITIAL_SIZE);
         struct arglist *a = cpc_alloc(&to->cont, sizeof(struct arglist));
         a->arg = to_->entry_arg;
         to->cont = cpc_continuation_push(to->cont, to_->entry);
