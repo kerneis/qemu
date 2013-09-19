@@ -94,8 +94,7 @@ cpc_invoke_continuation(struct cpc_continuation *c)
         /* If the continuation is empty, free it and return NULL, signalling
          * this continuation terminated. */
         if (c->length == 0) {
-            cpc_continuation_free(c);
-            return NULL;
+            return c;
         }
 
         /* Extract the next function from the continuation. */
@@ -138,7 +137,7 @@ CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
 {
     CoroutineCPC *to = DO_UPCAST(CoroutineCPC, base, to_);
 
-    if (!to->cont) {
+    if (!to->cont || to->cont->length == 0) {
         struct arglist *a = cpc_alloc(&to->cont, sizeof(struct arglist));
         a->arg = to_->entry_arg;
         to->cont = cpc_continuation_push(to->cont, to_->entry);
@@ -148,7 +147,7 @@ CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
 
     to->cont = cpc_invoke_continuation(to->cont);
 
-    if (!to->cont) {
+    if (!to->cont || to->cont->length == 0) {
         return COROUTINE_TERMINATE;
     } else {
         /* Fix the caller. This is normally done in qemu_coroutine_yield
