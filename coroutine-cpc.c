@@ -147,7 +147,7 @@ CoroutineAction qemu_coroutine_switch(Coroutine *from_, Coroutine *to_,
 
     to->cont = cpc_invoke_continuation(to->cont);
 
-    if (!to->cont || to->cont->length == 0) {
+    if (to->cont->length == 0) {
         return COROUTINE_TERMINATE;
     } else {
         /* Fix the caller. This is normally done in qemu_coroutine_yield
